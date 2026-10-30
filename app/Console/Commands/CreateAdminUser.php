@@ -1,8 +1,8 @@
 <?php
-namespace App\\Console\\Commands;
-use App\\Models\\User;
-use Illuminate\\Console\\Command;
-use Illuminate\\Support\\Facades\\Hash;
+namespace App\Console\Commands;
+use App\Models\User;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Hash;
 class CreateAdminUser extends Command {
  protected $signature='idss:create-admin';
  protected $description='Interactively create the first authorized IDSS administrator account';
