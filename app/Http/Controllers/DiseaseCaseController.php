@@ -1,9 +1,9 @@
 <?php
-namespace App\\Http\\Controllers;
-use App\\Models\\DiseaseCase;
-use App\\Models\\Farm;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Str;
+namespace App\Http\Controllers;
+use App\Models\DiseaseCase;
+use App\Models\Farm;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 class DiseaseCaseController extends Controller {
  public function index() { return view('cases.index',['cases'=>DiseaseCase::with('farm')->latest()->paginate(15)]); }
  public function create() { return view('cases.create',['farms'=>Farm::orderBy('name')->get()]); }
