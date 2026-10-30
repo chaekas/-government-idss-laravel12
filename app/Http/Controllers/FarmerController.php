@@ -1,8 +1,8 @@
 <?php
-namespace App\\Http\\Controllers;
-use App\\Models\\Farmer;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Str;
+namespace App\Http\Controllers;
+use App\Models\Farmer;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 class FarmerController extends Controller {
  public function index() { return view('farmers.index',['farmers'=>Farmer::latest()->paginate(15)]); }
  public function create() { return view('farmers.create'); }
