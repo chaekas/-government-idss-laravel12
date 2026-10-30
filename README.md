@@ -25,7 +25,7 @@ This is a foundation, not yet a complete production system. Full role/permission
 4. Create a MySQL database named `government_idss` (or your configured name).
 5. Run `php artisan key:generate`.
 6. Run `php artisan migrate`.
-7. Provision the first authorized user through a secure, controlled admin process. Do not use a public/default password.
+7. Run `php artisan idss:create-admin` to create the first administrator interactively; choose a strong password of at least 12 characters. Do not use a public/default password.
 8. Run `php artisan serve` and open the shown URL.
 
 Set `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` in `.env`.
