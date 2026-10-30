@@ -1,9 +1,9 @@
 <?php
-namespace App\\Http\\Controllers;
-use App\\Models\\Farm;
-use App\\Models\\Farmer;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Str;
+namespace App\Http\Controllers;
+use App\Models\Farm;
+use App\Models\Farmer;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 class FarmController extends Controller {
  public function index() { return view('farms.index',['farms'=>Farm::with('farmer')->latest()->paginate(15)]); }
  public function create() { return view('farms.create',['farmers'=>Farmer::orderBy('full_name')->get()]); }
