@@ -1,0 +1,6 @@
+@extends('layouts.app')
+@section('title','Disease cases')
+@section('content')
+<div class="heading"><div><small class="kicker">SURVEILLANCE / CASE REGISTER</small><h1>Disease case reports</h1><p>Track reported poultry health events and investigation status.</p></div><a class="button primary" href="{{ route('cases.create') }}">＋ Report disease case</a></div>
+<section class="panel"><div class="panel-head"><div><h2>Case register</h2><p>{{ $cases->total() }} reports</p></div></div>@if($cases->isEmpty())<div class="empty"><b>No disease reports found</b><p>Register a farm before submitting a disease case report.</p></div>@else<div class="table-wrap"><table><thead><tr><th>Case ID</th><th>Suspected disease</th><th>Farm</th><th>Observed</th><th>Affected / dead</th><th>Severity</th><th>Status</th></tr></thead><tbody>@foreach($cases as $case)<tr><td>{{ $case->case_code }}</td><td><b>{{ $case->disease_suspected }}</b></td><td>{{ $case->farm?->name ?? '—' }}</td><td>{{ $case->date_observed?->format('d M Y') }}</td><td>{{ $case->birds_affected }} / {{ $case->birds_dead }}</td><td><span class="badge {{ $case->severity }}">{{ ucfirst($case->severity) }}</span></td><td>{{ str_replace('_',' ',ucfirst($case->status)) }}</td></tr>@endforeach</tbody></table></div><div class="pagination">{{ $cases->links() }}</div>@endif</section>
+@endsection
