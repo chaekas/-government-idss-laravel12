@@ -1,8 +1,8 @@
 <?php
-namespace App\\Http\\Controllers;
-use App\\Models\\DiseaseCase;
-use App\\Models\\Farmer;
-use App\\Models\\Farm;
+namespace App\Http\Controllers;
+use App\Models\DiseaseCase;
+use App\Models\Farmer;
+use App\Models\Farm;
 class DashboardController extends Controller {
  public function __invoke() {
   return view('dashboard',[
