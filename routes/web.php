@@ -16,6 +16,7 @@ use App\Http\Controllers\LaboratoryResultController;
 use App\Http\Controllers\OutbreakController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SampleController;
+use App\Http\Controllers\SurveillanceController;
 use App\Http\Controllers\SurveillanceAttachmentController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -122,6 +123,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/cases.csv', [ReportsController::class, 'cases'])->name('reports.cases');
         Route::get('/reports/samples.csv', [ReportsController::class, 'samples'])->name('reports.samples');
         Route::get('/gis', [GISController::class, 'index'])->name('gis.index');
+        Route::get('/surveillance', [SurveillanceController::class, 'index'])->name('surveillance.index');
     });
 
     // Accept the legacy administrator role labels used by existing seeded accounts.
