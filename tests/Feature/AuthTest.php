@@ -38,6 +38,24 @@ class AuthTest extends TestCase
         $this->get(route('dashboard'))->assertOk();
     }
 
+    public function test_login_does_not_redirect_to_a_stale_localhost_intended_url(): void
+    {
+        $user = User::create([
+            'name' => 'Redirect Test Officer',
+            'email' => 'redirect-test@example.test',
+            'password' => 'Correct-Horse-Battery-42!',
+            'role' => 'field_officer',
+            'is_active' => true,
+        ]);
+
+        $this->withSession([
+            'url.intended' => 'http://localhost:8000/dashboard',
+        ])->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'Correct-Horse-Battery-42!',
+        ])->assertRedirect(route('dashboard'));
+    }
+
     public function test_inactive_user_cannot_sign_in(): void
     {
         $user = User::create([
