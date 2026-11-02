@@ -103,10 +103,10 @@ class SampleController extends Controller
     public function update(Request $request, Sample $sample)
     {
         $data = $request->validate([
-            'event_type' => ['required', Rule::in(['dispatched', 'received', 'accepted', 'rejected', 'damaged', 'contaminated', 'insufficient_volume', 'recollection_required'])],
+            'event_type' => ['required', Rule::in(['packaged', 'dispatched', 'received', 'accepted', 'rejected', 'damaged', 'contaminated', 'insufficient_volume', 'recollection_required', 'testing_started'])],
             'to_location' => ['nullable', 'string', 'max:180'],
             'received_by' => ['nullable', 'string', 'max:160'],
-            'condition_on_transfer' => ['nullable', 'string', 'max:180'],
+            'condition_on_transfer' => ['nullable', 'required_if:event_type,packaged,dispatched,received', 'string', 'max:180'],
             'notes' => ['nullable', 'string', 'max:3000'],
             'rejection_reason' => ['nullable', 'required_if:event_type,rejected,damaged,contaminated,insufficient_volume,recollection_required', 'string', 'max:1000'],
         ]);
@@ -114,25 +114,46 @@ class SampleController extends Controller
         $event = $data['event_type'];
         $role = $request->user()->role;
         $isAdmin = in_array($role, self::ADMIN_ROLES, true);
+        $isField = in_array($role, ['field_officer', 'regional_veterinary_officer'], true);
+        $isLab = in_array($role, self::LAB_ROLES, true);
 
-        if ($event === 'dispatched') {
-            abort_unless($isAdmin || in_array($role, ['field_officer', 'regional_veterinary_officer'], true), 403);
+        if ($event === 'packaged') {
+            abort_unless($isAdmin || $isField, 403);
+            if ($sample->transport_status !== 'not_dispatched' || $sample->packaged_at) {
+                throw ValidationException::withMessages(['event_type' => 'Only a collected sample that has not been packaged or dispatched can be packaged.']);
+            }
+        } elseif ($event === 'dispatched') {
+            abort_unless($isAdmin || $isField, 403);
             if ($sample->transport_status !== 'not_dispatched') {
                 throw ValidationException::withMessages(['event_type' => 'Only a collected sample that has not yet been dispatched can be dispatched.']);
+            }
+            if (!$sample->packaged_at) {
+                throw ValidationException::withMessages(['event_type' => 'Record packaging and the seal/transport condition before dispatching the sample.']);
             }
             if (!$sample->laboratory_id) {
                 throw ValidationException::withMessages(['event_type' => 'Assign a registered laboratory before dispatching this sample.']);
             }
         } elseif ($event === 'received') {
-            abort_unless($isAdmin || in_array($role, self::LAB_ROLES, true), 403);
+            abort_unless($isAdmin || $isLab, 403);
             if ($sample->transport_status !== 'in_transit') {
                 throw ValidationException::withMessages(['event_type' => 'The sample must be dispatched and in transit before the laboratory can receive it.']);
             }
             if (blank($data['received_by'] ?? null)) {
                 throw ValidationException::withMessages(['received_by' => 'Record the name of the person receiving the sample at the laboratory.']);
             }
+        } elseif ($event === 'testing_started') {
+            abort_unless($isAdmin || $role === 'laboratory_technician', 403);
+            if ($sample->transport_status !== 'received' || $sample->quality_status !== 'accepted') {
+                throw ValidationException::withMessages(['event_type' => 'Testing can start only after laboratory receipt and quality acceptance.']);
+            }
+            if ((int) $sample->assigned_technician !== (int) $request->user()->id) {
+                throw ValidationException::withMessages(['event_type' => 'Only the technician assigned to this sample may start its examination.']);
+            }
+            if ($sample->test_status !== 'pending' || $sample->testing_started_at) {
+                throw ValidationException::withMessages(['event_type' => 'This sample examination has already started or the sample has completed testing.']);
+            }
         } else {
-            abort_unless($isAdmin || in_array($role, self::LAB_ROLES, true), 403);
+            abort_unless($isAdmin || $isLab, 403);
             if ($sample->transport_status !== 'received') {
                 throw ValidationException::withMessages(['event_type' => 'Record laboratory receipt before making a sample quality decision.']);
             }
@@ -146,10 +167,18 @@ class SampleController extends Controller
 
         $fromLocation = $sample->movements()->first()?->to_location
             ?: ($sample->transport_status === 'in_transit' ? 'In transit' : 'Field collection');
-        $toLocation = $data['to_location'] ?? ($event === 'dispatched' ? $sample->laboratory?->name : ($event === 'received' ? $sample->laboratory?->name : 'Laboratory quality control'));
+        $toLocation = $data['to_location'] ?? match ($event) {
+            'packaged' => 'Field collection / packaged',
+            'dispatched' => $sample->laboratory?->name,
+            'received' => $sample->laboratory?->name,
+            'testing_started' => $sample->laboratory_section ?: $sample->laboratory?->name,
+            default => 'Laboratory quality control',
+        };
 
         $updates = [];
-        if ($event === 'dispatched') {
+        if ($event === 'packaged') {
+            $updates['packaged_at'] = now();
+        } elseif ($event === 'dispatched') {
             $updates['transport_status'] = 'in_transit';
         } elseif ($event === 'received') {
             $updates['transport_status'] = 'received';
@@ -157,6 +186,9 @@ class SampleController extends Controller
             if (!$sample->laboratory_reference_number) {
                 $updates['laboratory_reference_number'] = 'LABREF-'.now()->format('ymd').'-'.Str::upper(Str::random(6));
             }
+        } elseif ($event === 'testing_started') {
+            $updates['test_status'] = 'in_progress';
+            $updates['testing_started_at'] = now();
         } else {
             $updates['quality_status'] = $event;
             $updates['rejection_reason'] = in_array($event, ['rejected', 'damaged', 'contaminated', 'insufficient_volume', 'recollection_required'], true)
@@ -166,12 +198,14 @@ class SampleController extends Controller
 
         $sample->update($updates);
         $this->recordMovement($sample, $request, $event, $fromLocation, $toLocation, $data['notes'] ?? null, $data['received_by'] ?? null, $data['condition_on_transfer'] ?? null);
-        $this->audit($request, 'sample.'.$event, $sample, 'Sample '.$sample->sample_code.': '.$event.($data['rejection_reason'] ?? '' ));
+        $this->audit($request, 'sample.'.$event, $sample, 'Sample '.$sample->sample_code.': '.$event.($data['rejection_reason'] ?? ''));
 
         $message = match ($event) {
+            'packaged' => $sample->sample_code.' has been packaged. Verify seal and transport conditions before dispatch.',
             'dispatched' => $sample->sample_code.' has been dispatched to '.$sample->laboratory?->name.' and is in transit.',
             'received' => $sample->sample_code.' was received at '.$sample->laboratory?->name.'. Laboratory reference: '.$sample->laboratory_reference_number.'.',
             'accepted' => $sample->sample_code.' passed laboratory quality control and is ready for assignment and testing.',
+            'testing_started' => $sample->sample_code.' examination has started in '.$sample->laboratory_section.'.',
             default => $sample->sample_code.' quality status is '.$event.'. Reason: '.($data['rejection_reason'] ?? 'See sample custody record.'),
         };
         $this->notifyStakeholders($sample, 'Sample workflow updated', $message);
