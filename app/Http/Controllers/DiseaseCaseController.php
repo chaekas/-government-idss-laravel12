@@ -177,6 +177,17 @@ class DiseaseCaseController extends Controller
         return redirect()->route('cases.index')->with('status','Disease case updated.');
     }
 
+    public function close(Request $request,DiseaseCase $case)
+    {
+        abort_unless(in_array($request->user()->role,['regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'],true),403);
+        abort_if($case->status==='closed',422,'This case is already closed.');
+        abort_unless(in_array($case->status,['confirmed','rejected'],true) || $case->investigation?->approved_at,422,'A case can be closed only after a final laboratory decision or an approved investigation report.');
+        $data=$request->validate(['closure_reason'=>['required','string','max:2000']]);
+        \App\Services\DiseaseCaseWorkflow::transition($case,'closed',$request->user()->id,$data['closure_reason']);
+        AuditLog::create(['user_id'=>$request->user()->id,'action'=>'disease_case.closed','entity_type'=>'disease_case','entity_id'=>(string)$case->id,'ip_address'=>$request->ip(),'description'=>'Closed disease case '.$case->case_code.': '.$data['closure_reason'],'created_at'=>now()]);
+        return redirect()->route('cases.index')->with('status','Disease case closed and status history recorded.');
+    }
+
     private function authorizeCase(Request $request,DiseaseCase $case): void
     {
         if($request->user()->role==='farmer') abort_unless((int)$case->farm?->farmer_id === (int)$request->user()->farmer_id || $case->farm?->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists(),403);
