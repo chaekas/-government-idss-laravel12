@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\DiseaseCase;
 use App\Models\Farm;
+use App\Models\User;
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -72,6 +74,19 @@ class DiseaseCaseController extends Controller
             'description' => 'Reported disease case '.$case->case_code,
             'created_at' => now(),
         ]);
+
+        User::where('is_active', true)
+            ->whereIn('role', ['field_officer', 'regional_veterinary_officer', 'mlf_officer', 'system_admin'])
+            ->where('id', '<>', $request->user()->id)
+            ->get()
+            ->each(function (User $recipient) use ($case) {
+                UserNotification::create([
+                    'user_id' => $recipient->id,
+                    'title' => 'New suspected disease case',
+                    'message' => $case->case_code.' was reported for farm '.$case->farm->name.'. Investigation is required; this is not a confirmed diagnosis.',
+                    'category' => 'surveillance',
+                ]);
+            });
 
         return redirect()->route('cases.index')->with('status', 'Disease case reported successfully.');
     }
