@@ -11,5 +11,5 @@ class Outbreak extends Model
 
     protected function casts(): array { return ['start_date' => 'date', 'latitude' => 'decimal:7', 'longitude' => 'decimal:7']; }
 
-    public function diseaseCases(): BelongsToMany { return $this->belongsToMany(DiseaseCase::class)->withTimestamps(); }
+    public function diseaseCases(): BelongsToMany { return $this->belongsToMany(DiseaseCase::class, 'outbreak_case', 'outbreak_id', 'disease_case_id')->withTimestamps(); }
 }
