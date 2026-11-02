@@ -62,6 +62,7 @@ class OutbreakController extends Controller
         abort_unless(in_array($request->user()->role,['field_officer','regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'],true),403);
         abort_if($outbreak->status==='closed',422,'Closed outbreak records are locked.');
         $data=$this->validated($request,true);
+        if($request->user()->role==='field_officer' && $data['status']!==$outbreak->status) abort(403,'Only regional or Ministry surveillance leadership may change outbreak status.');
         $caseIds=$data['case_ids']??[]; unset($data['case_ids']);
         if($caseIds){
             $cases=DiseaseCase::with('farm')->whereIn('id',$caseIds)->get();
