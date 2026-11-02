@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\DiseaseCase;
 use App\Models\Farm;
 use Illuminate\Http\Request;
