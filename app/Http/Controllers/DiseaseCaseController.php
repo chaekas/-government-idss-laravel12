@@ -100,7 +100,7 @@ class DiseaseCaseController extends Controller
         if (!empty($data['animal_id']) && !Animal::whereKey($data['animal_id'])->where('farm_id',$farm->id)->exists()) {
             throw ValidationException::withMessages(['animal_id'=>'The selected animal does not belong to the selected farm.']);
         }
-        if (empty($data['latitude']) && empty($data['longitude']) && empty($farm->latitude) && empty($farm->longitude)) {
+        if (!isset($data['latitude']) && !isset($data['longitude']) && $farm->latitude === null && $farm->longitude === null) {
             throw ValidationException::withMessages(['latitude'=>'Capture the outbreak GPS coordinates or register coordinates on the farm record.']);
         }
         if (!empty($data['symptom_ids']) && DiseaseSymptom::whereIn('id',$data['symptom_ids'])->where('is_active',true)->count() !== count($data['symptom_ids'])) {
