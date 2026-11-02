@@ -6,9 +6,9 @@
 <a class="{{ request()->routeIs('farmers.*')?'active':'' }}" href="{{ route('farmers.index') }}">♙ Farmers</a>
 <a class="{{ request()->routeIs('farms.*')?'active':'' }}" href="{{ route('farms.index') }}">⌂ Farms</a>
 <a class="{{ request()->routeIs('animals.*')?'active':'' }}" href="{{ route('animals.index') }}">🐔 Poultry / animals</a>
-<a class="{{ request()->routeIs('cases.*')?'active':'' }}" href="{{ route('cases.index') }}">✚ Disease cases</a>
 <a class="{{ request()->routeIs('investigations.*')?'active':'' }}" href="{{ route('investigations.index') }}">◎ Investigations</a>
 @endif
+<a class="{{ request()->routeIs('cases.*')?'active':'' }}" href="{{ route('cases.index') }}">✚ Disease cases</a>
 @if(auth()->user()->role !== 'farmer')
 <a class="{{ request()->routeIs('samples.*')?'active':'' }}" href="{{ route('samples.index') }}">◈ Samples & custody</a>
 <a class="{{ request()->routeIs('laboratory.*')?'active':'' }}" href="{{ route('laboratory.index') }}">⚗ Laboratory</a>
