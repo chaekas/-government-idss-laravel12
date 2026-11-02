@@ -50,7 +50,8 @@ class DiseaseCaseController extends Controller
         $farms = Farm::with('farmer')->where('status','active');
         if ($request->user()->role === 'farmer') {
             abort_unless($request->user()->farmer_id,403,'Your account is not linked to a farmer record.');
-            $farms->whereHas('farmers',fn($owners)=>$owners->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to'));
+            $farmerId=$request->user()->farmer_id;
+            $farms->where(fn($q)=>$q->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to)));
         }
         return view('cases.create',[
             'farms'=>$farms->orderBy('name')->get(),
@@ -69,7 +70,7 @@ class DiseaseCaseController extends Controller
             $farmerId=$request->user()->farmer_id;
             $farmRule=Rule::exists('farms','id')->where(fn($q)=>$q->where('status','active'));
             $requestedFarmId=$request->input('farm_id');
-            if($requestedFarmId && !Farm::whereKey($requestedFarmId)->whereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to'))->exists()) {
+            if($requestedFarmId && !Farm::whereKey($requestedFarmId)->where(fn($q)=>$q->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to')))->exists()) {
                 throw ValidationException::withMessages(['farm_id'=>'You may report disease only for a farm currently linked to your farmer account.']);
             }
         }
@@ -96,7 +97,7 @@ class DiseaseCaseController extends Controller
         ]);
 
         $farm=Farm::findOrFail($data['farm_id']);
-        if($request->user()->role==='farmer' && !$farm->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists()) throw ValidationException::withMessages(['farm_id'=>'You may only report against a farm linked to your farmer account.']);
+        if($request->user()->role==='farmer' && (int)$farm->farmer_id !== (int)$request->user()->farmer_id && !$farm->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists()) throw ValidationException::withMessages(['farm_id'=>'You may only report against a farm linked to your farmer account.']);
         if (!empty($data['animal_id']) && !Animal::whereKey($data['animal_id'])->where('farm_id',$farm->id)->exists()) {
             throw ValidationException::withMessages(['animal_id'=>'The selected animal does not belong to the selected farm.']);
         }
@@ -178,7 +179,7 @@ class DiseaseCaseController extends Controller
 
     private function authorizeCase(Request $request,DiseaseCase $case): void
     {
-        if($request->user()->role==='farmer') abort_unless($case->farm?->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists(),403);
+        if($request->user()->role==='farmer') abort_unless((int)$case->farm?->farmer_id === (int)$request->user()->farmer_id || $case->farm?->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists(),403);
         else abort_unless(in_array($request->user()->role,self::STAFF_ROLES,true),403);
     }
 
