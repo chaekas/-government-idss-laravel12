@@ -39,7 +39,8 @@ class DiseaseCaseController extends Controller
 
         if ($request->user()->role === 'farmer') {
             abort_unless($request->user()->farmer_id,403,'Your account is not linked to a farmer record.');
-            $query->whereHas('farm',fn($farm)=>$farm->where('farmer_id',$request->user()->farmer_id));
+            $farmerId=$request->user()->farmer_id;
+            $query->whereHas('farm',fn($farm)=>$farm->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to')));
         }
 
         return view('cases.index',['cases'=>$query->paginate(20)->withQueryString()]);
@@ -137,9 +138,14 @@ class DiseaseCaseController extends Controller
     {
         $this->authorizeCase($request,$case);
         abort_if($case->investigation()->exists(),403,'A disease report cannot be edited after investigation has begun.');
+        $farms=Farm::where('status','active');
+        if($request->user()->role==='farmer') {
+            $farmerId=$request->user()->farmer_id;
+            $farms->where(fn($q)=>$q->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to')));
+        }
         return view('cases.edit',[
             'case'=>$case->load(['symptoms','attachments']),
-            'farms'=>Farm::where('status','active')->orderBy('name')->get(),
+            'farms'=>$farms->orderBy('name')->get(),
             'animals'=>Animal::where('farm_id',$case->farm_id)->orderBy('animal_code')->get(),
             'categories'=>DiseaseCategory::where('is_active',true)->orderBy('name')->get(),
             'symptoms'=>DiseaseSymptom::where('is_active',true)->orderBy('name')->get(),
