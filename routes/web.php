@@ -73,6 +73,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/outbreaks', [OutbreakController::class, 'index'])->name('outbreaks.index');
         Route::get('/outbreaks/create', [OutbreakController::class, 'create'])->name('outbreaks.create');
         Route::post('/outbreaks', [OutbreakController::class, 'store'])->name('outbreaks.store');
+        Route::put('/outbreaks/{outbreak}', [OutbreakController::class, 'update'])->name('outbreaks.update');
     });
 
     // Sample visibility is shared by field, laboratory and surveillance roles.
