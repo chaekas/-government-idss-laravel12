@@ -2,15 +2,19 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="{{ csrf_token() }}"><title>@yield('title','Dashboard') · Government IDSS</title><link rel="stylesheet" href="{{ asset('css/app.css') }}"></head>
 <body><div class="shell"><aside class="sidebar"><a class="brand" href="{{ route('dashboard') }}"><span class="mark">ID</span><span><strong>Government IDSS</strong><small>Livestock & Fisheries</small></span></a><p class="nav-label">WORKSPACE</p><nav>
 <a class="{{ request()->routeIs('dashboard')?'active':'' }}" href="{{ route('dashboard') }}">▦ Dashboard</a>
+@if(auth()->user()->role !== 'farmer')
 <a class="{{ request()->routeIs('farmers.*')?'active':'' }}" href="{{ route('farmers.index') }}">♙ Farmers</a>
 <a class="{{ request()->routeIs('farms.*')?'active':'' }}" href="{{ route('farms.index') }}">⌂ Farms</a>
 <a class="{{ request()->routeIs('animals.*')?'active':'' }}" href="{{ route('animals.index') }}">🐔 Poultry / animals</a>
 <a class="{{ request()->routeIs('cases.*')?'active':'' }}" href="{{ route('cases.index') }}">✚ Disease cases</a>
 <a class="{{ request()->routeIs('investigations.*')?'active':'' }}" href="{{ route('investigations.index') }}">◎ Investigations</a>
+@endif
+@if(auth()->user()->role !== 'farmer')
 <a class="{{ request()->routeIs('samples.*')?'active':'' }}" href="{{ route('samples.index') }}">◈ Samples & custody</a>
 <a class="{{ request()->routeIs('laboratory.*')?'active':'' }}" href="{{ route('laboratory.index') }}">⚗ Laboratory</a>
 @if(in_array(auth()->user()->role, ['system_admin','administrator','admin','mlf_officer','zonal_laboratory_administrator'], true))<a class="{{ request()->routeIs('laboratories.*')?'active':'' }}" href="{{ route('laboratories.index') }}">▣ Laboratory registry</a>@endif
 <a class="{{ request()->routeIs('outbreaks.*')?'active':'' }}" href="{{ route('outbreaks.index') }}">◉ Outbreaks</a>
+@endif
 <a class="{{ request()->routeIs('notifications.*')?'active':'' }}" href="{{ route('notifications.index') }}">♢ Notifications</a>
 @if(in_array(auth()->user()->role, ['system_admin','administrator','admin'], true))<a class="{{ request()->routeIs('audit.*')?'active':'' }}" href="{{ route('audit.index') }}">▤ Audit trail</a>@endif
 @if(in_array(auth()->user()->role, ['system_admin','administrator','admin'], true))<a class="{{ request()->routeIs('users.*')?'active':'' }}" href="{{ route('users.index') }}">♙ User management</a>@endif
