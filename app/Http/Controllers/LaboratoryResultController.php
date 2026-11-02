@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Laboratory;
 use App\Models\LaboratoryTestResult;
 use App\Models\Sample;
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -60,6 +61,10 @@ class LaboratoryResultController extends Controller
         if ($data['decision'] === 'approve') {
             $result->sample()->update(['test_status' => 'approved', 'result_summary' => $result->qualitative_result ?: $result->observations, 'approved_at' => now()]);
             $result->sample->diseaseCase()->update(['status' => 'confirmed']);
+        }
+        $caseReporter = $result->sample->diseaseCase->reporter;
+        if ($caseReporter) {
+            UserNotification::create(['user_id' => $caseReporter->id, 'title' => 'Laboratory result reviewed', 'message' => $result->result_code.' was '.$data['decision'].'d by the laboratory reviewer. Review comments: '.$data['review_comments'], 'category' => 'laboratory']);
         }
         AuditLog::create(['user_id' => $request->user()->id, 'action' => 'laboratory.result_'.$data['decision'], 'entity_type' => 'laboratory_test_result', 'entity_id' => (string) $result->id, 'ip_address' => $request->ip(), 'description' => ucfirst($data['decision']).' laboratory result '.$result->result_code, 'created_at' => now()]);
         return redirect()->route('laboratory.index')->with('status', 'Laboratory review recorded.');
