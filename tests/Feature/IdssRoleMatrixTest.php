@@ -86,4 +86,25 @@ class IdssRoleMatrixTest extends TestCase
 
         $this->actingAs($user)->get(route('samples.index'))->assertForbidden();
     }
+    public function test_legacy_super_admin_account_can_update_its_profile_without_losing_administrator_access(): void
+    {
+        $user = $this->account('super_admin');
+
+        $this->actingAs($user)->put(route('users.update', $user), [
+            'name' => 'Updated Legacy Administrator',
+            'email' => $user->email,
+            'role' => 'super_admin',
+            'farmer_id' => null,
+            'is_active' => 1,
+            'password' => '',
+            'password_confirmation' => '',
+        ])->assertRedirect(route('users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'role' => 'super_admin',
+            'is_active' => true,
+            'name' => 'Updated Legacy Administrator',
+        ]);
+    }
 }
