@@ -137,6 +137,17 @@ class DiseaseSurveillanceTest extends TestCase
             'cases_count'=>1,'deaths_count'=>3,'severity'=>'high','status'=>'active','case_ids'=>[$case->id],
         ])->assertRedirect(route('outbreaks.index'));
         $this->assertNotNull($outbreak->fresh()->confirmed_at);
+        $this->assertDatabaseHas('outbreak_status_history',['outbreak_id'=>$outbreak->id,'from_status'=>'suspected','to_status'=>'active']);
+    }
+
+
+    public function test_authorized_regional_officer_can_close_a_finalized_case_with_a_reason(): void
+    {
+        $field=$this->user('field_officer'); $regional=$this->user('regional_veterinary_officer');
+        $farm=$this->farm($field); $case=$this->case($field,$farm,['status'=>'confirmed']);
+        $this->actingAs($regional)->post(route('cases.close',$case),['closure_reason'=>'Final investigation reviewed and response completed.'])->assertRedirect(route('cases.index'));
+        $this->assertSame('closed',$case->fresh()->status);
+        $this->assertDatabaseHas('disease_case_status_history',['disease_case_id'=>$case->id,'from_status'=>'confirmed','to_status'=>'closed']);
     }
 
     public function test_surveillance_analytics_page_is_available_to_regional_officers(): void
