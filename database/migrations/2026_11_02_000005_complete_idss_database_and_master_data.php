@@ -73,8 +73,6 @@ return new class extends Migration
             if (!Schema::hasColumn('farmers', 'nationality')) $table->string('nationality', 100)->nullable();
             if (!Schema::hasColumn('farmers', 'status')) $table->string('status', 30)->default('active')->index();
             if (!Schema::hasColumn('farmers', 'archived_at')) $table->timestamp('archived_at')->nullable()->index();
-            if (!Schema::hasColumn('farmers', 'duplicate_verified_at')) $table->timestamp('duplicate_verified_at')->nullable();
-            if (!Schema::hasColumn('farmers', 'duplicate_verified_by')) $table->foreignId('duplicate_verified_by')->nullable()->constrained('users')->nullOnDelete();
         });
         Schema::create('farmer_contacts', function (Blueprint $table) {
             $table->id(); $table->foreignId('farmer_id')->constrained()->cascadeOnDelete();
