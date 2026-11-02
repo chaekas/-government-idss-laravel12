@@ -64,7 +64,7 @@ class LaboratoryResultController extends Controller
         }
         $caseReporter = $result->sample->diseaseCase->reporter;
         if ($caseReporter) {
-            UserNotification::create(['user_id' => $caseReporter->id, 'title' => 'Laboratory result reviewed', 'message' => $result->result_code.' was '.$data['decision'].'d by the laboratory reviewer. Review comments: '.$data['review_comments'], 'category' => 'laboratory']);
+            UserNotification::create(['user_id' => $caseReporter->id, 'title' => 'Laboratory result reviewed', 'message' => $result->result_code.' was '.($data['decision'] === 'approve' ? 'approved' : 'rejected').' by the laboratory reviewer. Review comments: '.$data['review_comments'], 'category' => 'laboratory']);
         }
         AuditLog::create(['user_id' => $request->user()->id, 'action' => 'laboratory.result_'.$data['decision'], 'entity_type' => 'laboratory_test_result', 'entity_id' => (string) $result->id, 'ip_address' => $request->ip(), 'description' => ucfirst($data['decision']).' laboratory result '.$result->result_code, 'created_at' => now()]);
         return redirect()->route('laboratory.index')->with('status', 'Laboratory review recorded.');
