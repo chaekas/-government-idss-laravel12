@@ -264,6 +264,73 @@ return new class extends Migration
             if (!Schema::hasColumn('laboratory_test_results', 'test_method_id')) $table->foreignId('test_method_id')->nullable()->constrained('test_methods')->nullOnDelete();
         });
 
+        // Location history and the remaining database entities named by SRS Chapter 6.
+        Schema::create('farm_locations', function (Blueprint $table) {
+            $table->id(); $table->foreignId('farm_id')->constrained()->restrictOnDelete();
+            $table->foreignId('administrative_area_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('location_type', 40)->default('primary'); $table->string('address_line', 255)->nullable();
+            $table->string('region', 100)->nullable(); $table->string('district', 100)->nullable();
+            $table->string('ward', 100)->nullable(); $table->string('village', 100)->nullable();
+            $table->decimal('latitude', 10, 7)->nullable(); $table->decimal('longitude', 10, 7)->nullable();
+            $table->boolean('is_primary')->default(false); $table->timestamps();
+            $table->index(['farm_id', 'is_primary']);
+        });
+        Schema::create('laboratory_user', function (Blueprint $table) {
+            $table->id(); $table->foreignId('laboratory_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('assignment_role', 60)->nullable(); $table->date('effective_from')->nullable();
+            $table->date('effective_to')->nullable(); $table->timestamps();
+            $table->unique(['laboratory_id', 'user_id', 'effective_from']);
+        });
+        Schema::create('laboratory_test_assignments', function (Blueprint $table) {
+            $table->id(); $table->foreignId('sample_id')->constrained()->restrictOnDelete();
+            $table->foreignId('laboratory_test_id')->constrained()->restrictOnDelete();
+            $table->foreignId('laboratory_id')->constrained()->restrictOnDelete();
+            $table->foreignId('assigned_technician')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('assigned_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('status', 40)->default('assigned')->index();
+            $table->timestamp('assigned_at')->nullable(); $table->timestamp('completed_at')->nullable();
+            $table->timestamps(); $table->index(['sample_id', 'status']);
+        });
+        Schema::table('laboratory_test_results', function (Blueprint $table) {
+            if (!Schema::hasColumn('laboratory_test_results', 'laboratory_test_assignment_id')) {
+                $table->foreignId('laboratory_test_assignment_id')->nullable()->constrained('laboratory_test_assignments')->nullOnDelete();
+            }
+        });
+        Schema::create('disease_case_symptom', function (Blueprint $table) {
+            $table->id(); $table->foreignId('disease_case_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('disease_symptom_id')->constrained()->restrictOnDelete();
+            $table->timestamps(); $table->unique(['disease_case_id', 'disease_symptom_id']);
+        });
+        Schema::create('outbreak_case', function (Blueprint $table) {
+            $table->id(); $table->foreignId('outbreak_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('disease_case_id')->constrained()->restrictOnDelete();
+            $table->timestamps(); $table->unique(['outbreak_id', 'disease_case_id']);
+        });
+        Schema::create('report_definitions', function (Blueprint $table) {
+            $table->id(); $table->string('code')->unique(); $table->string('name');
+            $table->string('report_type', 80); $table->json('configuration')->nullable();
+            $table->boolean('is_active')->default(true); $table->timestamps(); $table->softDeletes();
+        });
+        Schema::create('generated_reports', function (Blueprint $table) {
+            $table->id(); $table->foreignId('report_definition_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('generated_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('file_path', 500)->nullable(); $table->string('file_format', 20)->nullable();
+            $table->json('parameters')->nullable(); $table->timestamp('generated_at');
+            $table->timestamps(); $table->index(['report_definition_id', 'generated_at']);
+        });
+        Schema::create('dashboard_definitions', function (Blueprint $table) {
+            $table->id(); $table->string('code')->unique(); $table->string('name');
+            $table->string('audience_role', 80)->nullable(); $table->json('configuration')->nullable();
+            $table->boolean('is_active')->default(true); $table->timestamps(); $table->softDeletes();
+        });
+        Schema::create('system_settings', function (Blueprint $table) {
+            $table->id(); $table->string('key')->unique(); $table->longText('value')->nullable();
+            $table->string('value_type', 40)->default('string'); $table->text('description')->nullable();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+        });
+
         // Consistent audit actor/status columns on major business tables.
         foreach (['farmers', 'farms', 'animals', 'disease_cases', 'investigations', 'samples', 'laboratories', 'outbreaks'] as $name) {
             if (Schema::hasTable($name)) {
