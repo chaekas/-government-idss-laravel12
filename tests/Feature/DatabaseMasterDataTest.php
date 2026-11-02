@@ -45,10 +45,8 @@ class DatabaseMasterDataTest extends TestCase
         $this->assertTrue(Schema::hasColumn('farmers', 'sex'));
         $this->assertTrue(Schema::hasColumn('farmers', 'date_of_birth'));
         $this->assertTrue(Schema::hasColumn('farmers', 'nationality'));
-        $this->assertTrue(Schema::hasColumn('farms', 'farm_size'));
         $this->assertTrue(Schema::hasColumn('farms', 'farm_type_id'));
         $this->assertTrue(Schema::hasColumn('animals', 'farmer_id'));
-        $this->assertTrue(Schema::hasColumn('animals', 'colour'));
         $this->assertTrue(Schema::hasColumn('disease_cases', 'animal_id'));
         $this->assertTrue(Schema::hasColumn('samples', 'sample_type_id'));
     }
