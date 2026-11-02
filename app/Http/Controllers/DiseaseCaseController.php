@@ -52,7 +52,7 @@ class DiseaseCaseController extends Controller
         if ($request->user()->role === 'farmer') {
             abort_unless($request->user()->farmer_id,403,'Your account is not linked to a farmer record.');
             $farmerId=$request->user()->farmer_id;
-            $farms->where(fn($q)=>$q->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to'))));
+            $farms->where(fn($q)=>$q->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to')));
         }
         return view('cases.create',[
             'farms'=>$farms->orderBy('name')->get(),
