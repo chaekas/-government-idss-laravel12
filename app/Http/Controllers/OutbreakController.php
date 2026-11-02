@@ -90,7 +90,7 @@ class OutbreakController extends Controller
             'administrative_area_id'=>['nullable','exists:administrative_areas,id'],
             'region'=>['required','string','max:100'],'district'=>['required','string','max:100'],
             'latitude'=>['nullable','numeric','between:-90,90','required_with:longitude'],'longitude'=>['nullable','numeric','between:-180,180','required_with:latitude'],
-            'start_date'=>['required','date','before_or_equal:today'],'cases_count'=>['required','integer','min:1'],'deaths_count'=>['required','integer','min:0','lte:cases_count'],
+            'start_date'=>['required','date','before_or_equal:today'],'cases_count'=>['required','integer','min:1'],'deaths_count'=>['required','integer','min:0'],
             'severity'=>['required','in:low,medium,high,critical'],
             'status'=>[$updating?'required':'sometimes','in:suspected,active,closed'],
             'response_actions'=>['nullable','string','max:5000'],
