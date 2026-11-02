@@ -52,7 +52,7 @@ class DiseaseCaseController extends Controller
         if ($request->user()->role === 'farmer') {
             abort_unless($request->user()->farmer_id,403,'Your account is not linked to a farmer record.');
             $farmerId=$request->user()->farmer_id;
-            $farms->where(fn($q)=>$q->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to)));
+            $farms->where(fn($q)=>$q->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to'))));
         }
         return view('cases.create',[
             'farms'=>$farms->orderBy('name')->get(),
@@ -169,7 +169,7 @@ class DiseaseCaseController extends Controller
             'attachments'=>['nullable','array','max:5'],'attachments.*'=>['file','mimes:jpg,jpeg,png,pdf','max:10240'],
         ]);
         $farm=Farm::findOrFail($data['farm_id']);
-        if($request->user()->role==='farmer' && !$farm->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists()) throw ValidationException::withMessages(['farm_id'=>'You may only update a report to a farm linked to your farmer account.']);
+        if($request->user()->role==='farmer' && (int)$farm->farmer_id !== (int)$request->user()->farmer_id && !$farm->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists()) throw ValidationException::withMessages(['farm_id'=>'You may only update a report to a farm linked to your farmer account.']);
         if (!empty($data['animal_id']) && !Animal::whereKey($data['animal_id'])->where('farm_id',$farm->id)->exists()) throw ValidationException::withMessages(['animal_id'=>'The selected animal does not belong to the selected farm.']);
         if (empty($data['latitude']) && empty($data['longitude']) && empty($farm->latitude) && empty($farm->longitude)) throw ValidationException::withMessages(['latitude'=>'Capture the outbreak GPS coordinates or register coordinates on the farm record.']);
         $files=$request->file('attachments',[]); $symptoms=$data['symptom_ids'] ?? [];
