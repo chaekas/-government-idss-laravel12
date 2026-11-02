@@ -37,4 +37,7 @@ class Sample extends Model
     public function assignedBy(): BelongsTo { return $this->belongsTo(User::class, 'assigned_by'); }
     public function movements(): HasMany { return $this->hasMany(SampleMovement::class)->latest('event_at'); }
     public function results(): HasMany { return $this->hasMany(LaboratoryTestResult::class); }
+    public function transportations(): HasMany { return $this->hasMany(SampleTransportation::class); }
+    public function storageRecords(): HasMany { return $this->hasMany(SampleStorageRecord::class); }
+    public function testAssignments(): HasMany { return $this->hasMany(LaboratoryTestAssignment::class); }
 }
