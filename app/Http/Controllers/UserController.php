@@ -7,6 +7,7 @@ use App\Models\Farmer;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
@@ -29,7 +30,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email', 'max:180', 'unique:users,email'],
-            'role' => ['required', 'in:farmer,field_officer,laboratory_technician,laboratory_manager,regional_veterinary_officer,zonal_laboratory_administrator,mlf_officer,system_admin'],
+            'role' => ['required', Rule::in(array_keys(config('idss.roles')))],
             'farmer_id' => ['exclude_unless:role,farmer', 'required', 'integer', 'exists:farmers,id', 'unique:users,farmer_id'],
             'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
