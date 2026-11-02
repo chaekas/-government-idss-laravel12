@@ -78,7 +78,7 @@ return new class extends Migration
             $table->boolean('notify_regional_officers')->default(true);
             $table->boolean('notify_ministry_officers')->default(true);
             $table->boolean('is_active')->default(true); $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
+            $table->timestamps(); $table->softDeletes();
         });
     }
 
