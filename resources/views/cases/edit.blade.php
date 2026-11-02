@@ -21,6 +21,6 @@
 <div class="field"><label>Location description</label><input name="location_description" value="{{ old('location_description',$case->location_description) }}"></div>
 <div class="field full"><label>Add supporting files (JPG/PNG/PDF, max 10 MB each)</label><input type="file" name="attachments[]" multiple accept=".jpg,.jpeg,.png,.pdf"></div>
 </div>
-@if($case->attachments->isNotEmpty())<h2 class="section-title">Existing evidence</h2><ul>@foreach($case->attachments as $attachment)<li>{{ $attachment->original_name }} — {{ $attachment->uploaded_at?->format('d M Y H:i') }}</li>@endforeach</ul>@endif
+@if($case->attachments->isNotEmpty())<h2 class="section-title">Existing evidence</h2><ul>@foreach($case->attachments as $attachment)<li><a href="{{ route('surveillance.case-attachments.show',$attachment) }}">{{ $attachment->original_name }}</a> — {{ $attachment->uploaded_at?->format('d M Y H:i') }}</li>@endforeach</ul>@endif
 <div class="actions"><a class="button secondary" href="{{ route('cases.index') }}">Cancel</a><button class="button primary">Save corrections</button></div></form>
 @endsection
