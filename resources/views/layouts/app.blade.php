@@ -16,6 +16,10 @@
 <a class="{{ request()->routeIs('outbreaks.*')?'active':'' }}" href="{{ route('outbreaks.index') }}">◉ Outbreaks</a>
 @endif
 <a class="{{ request()->routeIs('notifications.*')?'active':'' }}" href="{{ route('notifications.index') }}">♢ Notifications</a>
+@if(in_array(auth()->user()->role, ['regional_veterinary_officer','mlf_officer','system_admin','administrator','admin'], true))
+<a class="{{ request()->routeIs('reports.*')?'active':'' }}" href="{{ route('reports.index') }}">▤ Reports & exports</a>
+<a class="{{ request()->routeIs('gis.*')?'active':'' }}" href="{{ route('gis.index') }}">⌖ GIS map</a>
+@endif
 @if(in_array(auth()->user()->role, ['system_admin','administrator','admin'], true))<a class="{{ request()->routeIs('audit.*')?'active':'' }}" href="{{ route('audit.index') }}">▤ Audit trail</a>@endif
 @if(in_array(auth()->user()->role, ['system_admin','administrator','admin'], true))<a class="{{ request()->routeIs('users.*')?'active':'' }}" href="{{ route('users.index') }}">♙ User management</a>@endif
 </nav><div class="side-foot">● Surveillance workspace</div></aside><main class="main"><header class="topbar"><div><small>MINISTRY OF LIVESTOCK AND FISHERIES</small><strong>Integrated Disease Surveillance System</strong></div><div class="account"><span class="avatar">{{ strtoupper(substr(auth()->user()->name,0,1)) }}</span><span><b>{{ auth()->user()->name }}</b><small>{{ str_replace('_',' ',ucfirst(auth()->user()->role)) }}</small></span><form method="POST" action="{{ route('logout') }}">@csrf<button class="logout">Sign out</button></form></div></header><section class="content">@if(session('status'))<div class="alert success">{{ session('status') }}</div>@endif @if($errors->any())<div class="alert error"><b>Please check the form:</b><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif @yield('content')</section><footer>IDSS · Early detection. Traceable investigations. Evidence-led response.</footer></main></div></body></html>
