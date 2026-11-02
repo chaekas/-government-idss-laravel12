@@ -107,4 +107,86 @@ class IdssRoleMatrixTest extends TestCase
             'name' => 'Updated Legacy Administrator',
         ]);
     }
+
+    public function test_super_admin_can_create_edit_and_reset_staff_accounts(): void
+    {
+        $admin = $this->account('system_admin');
+        $this->actingAs($admin);
+
+        $this->get(route('users.index'))->assertOk()->assertSee('Users management');
+        $this->get(route('users.create'))->assertOk()->assertDontSee('Farmer / Livestock Owner');
+
+        $this->post(route('users.store'), [
+            'name' => 'New Lab Technician',
+            'email' => 'new.tech@example.test',
+            'role' => 'laboratory_technician',
+            'password' => 'New-Staff-Password-2026',
+            'password_confirmation' => 'New-Staff-Password-2026',
+        ])->assertRedirect(route('users.index'));
+
+        $staff = User::where('email', 'new.tech@example.test')->firstOrFail();
+        $this->assertSame('laboratory_technician', $staff->role);
+        $this->assertNull($staff->farmer_id);
+
+        $this->put(route('users.update', $staff), [
+            'name' => 'Updated Lab Technician',
+            'email' => $staff->email,
+            'role' => 'laboratory_manager',
+            'is_active' => 1,
+        ])->assertRedirect(route('users.index'));
+
+        $this->put(route('users.password.reset', $staff), [
+            'password' => 'Reset-Staff-Password-2026',
+            'password_confirmation' => 'Reset-Staff-Password-2026',
+        ])->assertRedirect(route('users.index'));
+
+        $staff->refresh();
+        $this->assertSame('Updated Lab Technician', $staff->name);
+        $this->assertSame('laboratory_manager', $staff->role);
+        $this->assertTrue(\\\\Illuminate\\\\Support\\\\Facades\\\\Hash::check('Reset-Staff-Password-2026', $staff->password));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'user.password_reset', 'entity_id' => (string) $staff->id]);
+    }
+
+    public function test_super_admin_cannot_create_or_edit_farmer_accounts_or_assign_farmer_role(): void
+    {
+        $admin = $this->account('system_admin');
+        $farmer = $this->account('farmer');
+        $this->actingAs($admin);
+
+        $this->post(route('users.store'), [
+            'name' => 'Admin-created farmer',
+            'email' => 'admin-farmer@example.test',
+            'role' => 'farmer',
+            'password' => 'Farmer-Password-2026',
+            'password_confirmation' => 'Farmer-Password-2026',
+        ])->assertSessionHasErrors('role');
+
+        $this->put(route('users.update', $farmer), [
+            'name' => $farmer->name,
+            'email' => $farmer->email,
+            'role' => 'field_officer',
+            'is_active' => 1,
+        ])->assertNotFound();
+
+        $this->put(route('users.password.reset', $farmer), [
+            'password' => 'Reset-Farmer-Password-2026',
+            'password_confirmation' => 'Reset-Farmer-Password-2026',
+        ])->assertNotFound();
+
+        $this->assertDatabaseMissing('users', ['email' => 'admin-farmer@example.test']);
+        $this->assertSame('farmer', $farmer->fresh()->role);
+    }
+
+    public function test_non_admin_cannot_access_staff_user_management_or_password_reset(): void
+    {
+        $staff = $this->account('field_officer');
+        $target = $this->account('laboratory_technician');
+        $this->actingAs($staff);
+        $this->get(route('users.index'))->assertForbidden();
+        $this->put(route('users.password.reset', $target), [
+            'password' => 'Reset-Staff-Password-2026',
+            'password_confirmation' => 'Reset-Staff-Password-2026',
+        ])->assertForbidden();
+    }
+
 }
