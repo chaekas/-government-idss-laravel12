@@ -58,15 +58,15 @@ Route::middleware('auth')->group(function () {
         Route::resource('farms', FarmController::class)->only(['index', 'create', 'store']);
         Route::resource('animals', AnimalController::class)->only(['index', 'create', 'store']);
 
-        Route::get('/investigations', [InvestigationController::class, 'index'])->name('investigations.index');
         Route::get('/investigations/create', [InvestigationController::class, 'create'])->name('investigations.create');
         Route::post('/investigations', [InvestigationController::class, 'store'])->name('investigations.store');
         Route::put('/investigations/{investigation}', [InvestigationController::class, 'update'])->name('investigations.update');
-        Route::get('/investigations/{investigation}/report', [InvestigationController::class, 'report'])->name('investigations.report');
     });
 
-    Route::middleware('role:mlf_officer')->get('/investigations', [InvestigationController::class, 'index'])->name('investigations.index');
-    Route::middleware('role:mlf_officer')->get('/investigations/{investigation}/report', [InvestigationController::class, 'report'])->name('investigations.report');
+    Route::middleware('role:field_officer,regional_veterinary_officer,mlf_officer,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
+        Route::get('/investigations', [InvestigationController::class, 'index'])->name('investigations.index');
+        Route::get('/investigations/{investigation}/report', [InvestigationController::class, 'report'])->name('investigations.report');
+    });
 
     Route::middleware('role:regional_veterinary_officer,mlf_officer,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::post('/investigations/{investigation}/approve', [InvestigationController::class, 'approve'])->name('investigations.approve');
