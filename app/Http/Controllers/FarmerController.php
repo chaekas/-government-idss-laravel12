@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Farmer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class FarmerController extends Controller
 {
