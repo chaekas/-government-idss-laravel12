@@ -25,7 +25,7 @@
 <details style="margin-top:12px"><summary>Update investigation</summary>
 <form method="POST" enctype="multipart/form-data" action="{{ route('investigations.update',$inv) }}" style="padding:12px">@csrf @method('PUT')
 <div class="form-grid">
-<div class="field"><label>Assigned officer *</label><select name="assigned_to" required>@foreach(\App\Models\User::where('is_active',true)->whereIn('role',['field_officer','regional_veterinary_officer'])->orderBy('name')->get() as $officer)<option value="{{ $officer->id }}" @selected($inv->assigned_to==$officer->id)>{{ $officer->name }}</option>@endforeach</select></div>
+<div class="field"><label>Assigned officer *</label><select name="assigned_to" required>@foreach(\App\Models\User::where('is_active',true)->where('role','field_officer')->orderBy('name')->get() as $officer)<option value="{{ $officer->id }}" @selected($inv->assigned_to==$officer->id)>{{ $officer->name }}</option>@endforeach</select></div>
 <div class="field"><label>Investigation date *</label><input type="date" name="investigated_at" max="{{ now()->toDateString() }}" required value="{{ $inv->investigated_at?->toDateString() }}"></div>
 <div class="field"><label>Status *</label><select name="status">@foreach(['under_investigation'=>'Under investigation','sample_collected'=>'Sample collected','completed'=>'Completed — ready for approval'] as $value=>$label)<option value="{{ $value }}" @selected($inv->status===$value)>{{ $label }}</option>@endforeach</select></div>
 <div class="field full"><label>Field observations *</label><textarea name="field_observations" rows="3" required>{{ $inv->field_observations }}</textarea></div>
