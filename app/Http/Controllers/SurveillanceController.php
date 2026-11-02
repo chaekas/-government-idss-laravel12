@@ -15,9 +15,9 @@ class SurveillanceController extends Controller
     public function index(Request $request)
     {
         $filters=$request->validate(['from'=>['nullable','date'],'to'=>['nullable','date','after_or_equal:from']]);
-        $base=DiseaseCase::with(['farm','diseaseCategory']);
-        if(!empty($filters['from'])) $base->whereDate('date_observed','>=',$filters['from']);
-        if(!empty($filters['to'])) $base->whereDate('date_observed','<=',$filters['to']);
+        $from=$filters['from']??now()->subMonths(11)->startOfMonth()->toDateString();
+        $to=$filters['to']??now()->toDateString();
+        $base=DiseaseCase::with(['farm','diseaseCategory'])->whereDate('date_observed','>=',$from)->whereDate('date_observed','<=',$to);
         $cases=$base->get();
 
         $statusCounts=$cases->groupBy('status')->map->count()->sortDesc();
@@ -27,8 +27,6 @@ class SurveillanceController extends Controller
         $monthly=$cases->groupBy(fn($case)=>($case->date_observed ?: $case->created_at)->format('Y-m'))->map->count()->sortKeys();
         $samples=Sample::whereNotNull('released_at')->get(['created_at','released_at']);
         $turnaroundHours=$samples->map(fn($sample)=>$sample->created_at?->diffInHours($sample->released_at))->filter(fn($hours)=>$hours!==null);
-        $from=$filters['from']??now()->subMonths(11)->startOfMonth()->toDateString();
-        $to=$filters['to']??now()->toDateString();
         $monthlyTrend=[];
         $cursor=\Illuminate\Support\Carbon::parse($from)->startOfMonth();
         $end=\Illuminate\Support\Carbon::parse($to)->startOfMonth();
