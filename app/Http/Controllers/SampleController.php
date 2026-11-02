@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class SampleController extends Controller
 {
-    private const ADMIN_ROLES = ['system_admin', 'administrator', 'admin'];
+    private const ADMIN_ROLES = ['system_admin', 'super_admin', 'super-admin', 'administrator', 'admin'];
     private const LAB_ROLES = ['laboratory_technician', 'laboratory_manager', 'zonal_laboratory_administrator'];
     private const LEADERSHIP_ROLES = ['regional_veterinary_officer', 'mlf_officer'];
 
