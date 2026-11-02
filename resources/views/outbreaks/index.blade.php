@@ -10,6 +10,7 @@
 <div class="form-grid"><div><small>Linked cases</small><b>{{ $outbreak->diseaseCases->count() }}</b></div><div><small>Cases / deaths</small><b>{{ $outbreak->cases_count }} / {{ $outbreak->deaths_count }}</b></div><div><small>Severity</small><b>{{ ucfirst($outbreak->severity) }}</b></div><div><small>Confirmation</small><b>{{ $outbreak->confirmed_at?->format('d M Y') ?? 'Not confirmed' }}</b></div></div>
 @if($outbreak->diseaseCases->isNotEmpty())<details><summary>View linked case reports</summary><ul>@foreach($outbreak->diseaseCases as $case)<li>{{ $case->case_code }} — {{ $case->disease_suspected }} ({{ $case->status }})</li>@endforeach</ul></details>@endif
 <p>{{ $outbreak->response_actions }}</p>
+<details><summary>Outbreak status history</summary><ul>@foreach($outbreak->statusHistory as $history)<li>{{ $history->changed_at?->format('d M Y H:i') }} · {{ $history->from_status ?: 'Created' }} → {{ $history->to_status }} by {{ $history->changedBy?->name ?? 'System' }}</li>@endforeach</ul></details>
 @if($outbreak->status!=='closed' && in_array(auth()->user()->role,['field_officer','regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'],true))
 <details><summary>Update outbreak status and response</summary>
 <form method="POST" action="{{ route('outbreaks.update',$outbreak) }}" style="padding:12px">@csrf @method('PUT')
