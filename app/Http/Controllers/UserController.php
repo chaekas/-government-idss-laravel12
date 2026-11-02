@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Farmer;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,7 +13,10 @@ class UserController extends Controller
 {
     public function index()
     {
-        return view('users.index', ['users' => User::with('farmer')->orderBy('name')->paginate(20), 'farmers' => Farmer::orderBy('full_name')->get()]);
+        return view('users.index', [
+            'users' => User::with('farmer')->orderBy('name')->paginate(20),
+            'farmers' => Farmer::orderBy('full_name')->get(),
+        ]);
     }
 
     public function create()
@@ -29,9 +33,23 @@ class UserController extends Controller
             'farmer_id' => ['nullable', 'required_if:role,farmer', 'exists:farmers,id', 'unique:users,farmer_id'],
             'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
-        if (($data['role'] ?? null) !== 'farmer') { $data['farmer_id'] = null; }\n        $data['is_active'] = true;
+
+        if ($data['role'] !== 'farmer') {
+            $data['farmer_id'] = null;
+        }
+        $data['is_active'] = true;
+
         $user = User::create($data);
-        AuditLog::create(['user_id' => $request->user()->id, 'action' => 'user.created', 'entity_type' => 'user', 'entity_id' => (string) $user->id, 'ip_address' => $request->ip(), 'description' => 'Created user '.$user->email.' with role '.$user->role, 'created_at' => now()]);
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'user.created',
+            'entity_type' => 'user',
+            'entity_id' => (string) $user->id,
+            'ip_address' => $request->ip(),
+            'description' => 'Created user '.$user->email.' with role '.$user->role,
+            'created_at' => now(),
+        ]);
+
         return redirect()->route('users.index')->with('status', 'User created successfully.');
     }
 
@@ -45,16 +63,31 @@ class UserController extends Controller
             'is_active' => ['required', 'boolean'],
             'password' => ['nullable', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
-        if (($data['role'] ?? null) !== 'farmer') { $data['farmer_id'] = null; }\n        if (empty($data['password'])) {
+
+        if ($data['role'] !== 'farmer') {
+            $data['farmer_id'] = null;
+        }
+        if (empty($data['password'])) {
             unset($data['password']);
         } else {
             $data['password'] = Hash::make($data['password']);
         }
+
         if ($user->is($request->user()) && !$request->boolean('is_active')) {
             return back()->withErrors(['is_active' => 'You cannot deactivate your own account.']);
         }
+
         $user->update($data);
-        AuditLog::create(['user_id' => $request->user()->id, 'action' => 'user.updated', 'entity_type' => 'user', 'entity_id' => (string) $user->id, 'ip_address' => $request->ip(), 'description' => 'Updated user '.$user->email, 'created_at' => now()]);
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'user.updated',
+            'entity_type' => 'user',
+            'entity_id' => (string) $user->id,
+            'ip_address' => $request->ip(),
+            'description' => 'Updated user '.$user->email,
+            'created_at' => now(),
+        ]);
+
         return redirect()->route('users.index')->with('status', 'User updated.');
     }
 }
