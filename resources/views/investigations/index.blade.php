@@ -8,6 +8,7 @@
 <article class="panel" style="margin:14px 0;padding:16px">
 <div class="panel-head"><div><h2>{{ $inv->investigation_code }} · {{ $inv->diseaseCase?->case_code }}</h2><p>{{ $inv->diseaseCase?->disease_suspected }} · {{ $inv->diseaseCase?->farm?->name }}</p></div><div><b>{{ str_replace('_',' ',ucfirst($inv->status)) }}</b><small>{{ $inv->investigated_at?->format('d M Y') }}</small></div></div>
 <div class="form-grid"><div><small>Assigned officer</small><b>{{ $inv->assignee?->name }}</b></div><div><small>Started by</small><b>{{ \App\Models\User::find($inv->started_by)?->name ?? '—' }}</b></div><div><small>Approval</small><b>{{ $inv->approved_at?->format('d M Y H:i') ?? 'Pending approval' }}</b></div></div>
+<p><a href="{{ route('investigations.report',$inv) }}" target="_blank">View / print investigation report →</a></p>
 <details style="margin-top:12px"><summary>View investigation record, evidence and history</summary>
 <div class="form-grid" style="padding:12px">
 <div class="field full"><b>Field observations</b><p>{{ $inv->field_observations }}</p></div>
