@@ -12,6 +12,9 @@
 <article><span>Suspected / active outbreaks</span><strong>{{ number_format($activeOutbreaks) }}</strong><small>Require surveillance follow-up</small></article>
 <article><span>Average laboratory turnaround</span><strong>{{ $averageTurnaroundHours !== null ? $averageTurnaroundHours.' hrs' : '—' }}</strong><small>Across {{ $releasedSamples }} released samples</small></article>
 </div>
+<section class="panel"><div class="panel-head"><div><h2>Surveillance alerts</h2><p>{{ $unreadAlerts }} unread alerts for your account</p></div><a href="{{ route('notifications.index') }}">Open notification inbox →</a></div>
+@if($recentAlerts->isEmpty())<p>No surveillance or outbreak alerts in your inbox.</p>@else<ul>@foreach($recentAlerts as $alert)<li><b>{{ $alert->title }}</b> — {{ $alert->message }} <small>{{ $alert->created_at?->format('d M Y H:i') }}</small></li>@endforeach</ul>@endif
+</section>
 <div class="panel"><div class="panel-head"><div><h2>Reported case trend</h2><p>Cases grouped by month of observation</p></div></div>
 @if(collect($monthlyTrend)->sum('cases')===0)<div class="empty">No cases recorded for this period.</div>@else
 <div class="table-wrap"><table><thead><tr><th>Month</th><th>Reported cases</th><th>Visual trend</th></tr></thead><tbody>@foreach($monthlyTrend as $month)<tr><td>{{ $month['month'] }}</td><td>{{ $month['cases'] }}</td><td><div style="background:#dbe7df;border-radius:5px;height:10px;width:100%"><div style="background:#28734b;border-radius:5px;height:10px;width:{{ $month['cases'] ? max(2,($month['cases']/max(1,collect($monthlyTrend)->max('cases')))*100) : 0 }}%"></div></div></td></tr>@endforeach</tbody></table></div>@endif
