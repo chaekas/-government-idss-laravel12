@@ -52,6 +52,8 @@ Route::middleware('auth')->group(function () {
         Route::put('/cases/{case}', [DiseaseCaseController::class, 'update'])->name('cases.update');
     });
 
+    Route::middleware('role:regional_veterinary_officer,mlf_officer,system_admin,super_admin,super-admin,administrator,admin')->post('/cases/{case}/close', [DiseaseCaseController::class, 'close'])->name('cases.close');
+
     // Field registration and case investigation.
     Route::middleware('role:field_officer,regional_veterinary_officer,system_admin,administrator,admin')->group(function () {
         Route::resource('farmers', FarmerController::class)->only(['index', 'create', 'store']);
