@@ -10,7 +10,7 @@ class Farmer extends Model
 {
     protected $fillable = [
         'farmer_code', 'full_name', 'phone', 'email', 'national_id', 'region', 'district',
-        'ward', 'village', 'address', 'sex', 'date_of_birth', 'nationality', 'farmer_type',
+        'ward', 'village', 'address', 'sex', 'date_of_birth', 'nationality',
         'status', 'archived_at',
     ];
 
