@@ -13,7 +13,7 @@ class Sample extends Model
         'collection_date', 'received_at', 'sample_type', 'collection_notes', 'transport_status',
         'quality_status', 'rejection_reason', 'test_status', 'result_summary', 'approved_at',
         'laboratory_reference_number', 'laboratory_section', 'assigned_technician', 'assigned_by',
-        'assigned_at', 'testing_started_at', 'testing_completed_at', 'released_at',
+        'assigned_at', 'testing_started_at', 'testing_completed_at', 'released_at', 'packaged_at',
     ];
 
     protected function casts(): array
@@ -26,6 +26,7 @@ class Sample extends Model
             'testing_started_at' => 'datetime',
             'testing_completed_at' => 'datetime',
             'released_at' => 'datetime',
+            'packaged_at' => 'datetime',
         ];
     }
 
