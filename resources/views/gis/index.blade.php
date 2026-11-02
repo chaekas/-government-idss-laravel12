@@ -17,7 +17,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const bounds = [];
     points.forEach(function (point) {
         const position = [point.latitude, point.longitude];
-        const marker = L.marker(position).addTo(map);
+        const markerColor = point.type === 'outbreak' ? '#b91c1c' : (point.type === 'case' ? '#d97706' : '#047857');
+        const marker = L.circleMarker(position, {radius: 8, color: markerColor, fillColor: markerColor, fillOpacity: 0.8, weight: 2}).addTo(map);
         marker.bindPopup('<strong>' + escapeHtml(point.label) + '</strong><br>' + escapeHtml(point.code) + '<br>' + escapeHtml(point.detail));
         bounds.push(position);
     });
