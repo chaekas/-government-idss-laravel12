@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class IdssRoleMatrixTest extends TestCase
@@ -143,7 +144,7 @@ class IdssRoleMatrixTest extends TestCase
         $staff->refresh();
         $this->assertSame('Updated Lab Technician', $staff->name);
         $this->assertSame('laboratory_manager', $staff->role);
-        $this->assertTrue(\\\\Illuminate\\\\Support\\\\Facades\\\\Hash::check('Reset-Staff-Password-2026', $staff->password));
+        $this->assertTrue(Hash::check('Reset-Staff-Password-2026', $staff->password));
         $this->assertDatabaseHas('audit_logs', ['action' => 'user.password_reset', 'entity_id' => (string) $staff->id]);
     }
 
