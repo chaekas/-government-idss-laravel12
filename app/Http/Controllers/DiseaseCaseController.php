@@ -12,6 +12,7 @@ use App\Models\DiseaseSymptom;
 use App\Models\AdministrativeArea;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Models\SurveillanceAlertRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -183,6 +184,30 @@ class DiseaseCaseController extends Controller
 
     private function notifySurveillanceUsers(DiseaseCase $case,string $title,string $message,string $category): void
     {
-        User::where('is_active',true)->whereIn('role',['field_officer','regional_veterinary_officer','mlf_officer','system_admin'])->where('id','<>',$case->reported_by)->get()->each(fn(User $recipient)=>UserNotification::create(['user_id'=>$recipient->id,'title'=>$title,'message'=>$message,'category'=>$category]));
-    }
-}
+        $recipients=User::where('is_active',true)
+            ->whereIn('role',['field_officer','regional_veterinary_officer'])
+            ->where('id','<>',$case->reported_by)->get()->keyBy('id');
+
+        $levels=['low'=>1,'medium'=>2,'high'=>3,'critical'=>4];
+        foreach(SurveillanceAlertRule::where('is_active',true)->get() as $rule) {
+            if(($levels[$case->severity]??0)<($levels[$rule->severity]??99)) continue;
+            $farm=$case->farm;
+            $matchingCases=DiseaseCase::where('disease_suspected',$case->disease_suspected)
+                ->where('reported_at','>=',now()->subHours($rule->within_hours))
+                ->whereHas('farm',fn($q)=>$q->where('district',$farm?->district)->where('region',$farm?->region))
+                ->count();
+            if($matchingCases < $rule->case_threshold) continue;
+            $roles=[];
+            if($rule->notify_field_officers) $roles[]='field_officer';
+            if($rule->notify_regional_officers) $roles[]='regional_veterinary_officer';
+            if($rule->notify_ministry_officers) $roles=array_merge($roles,['mlf_officer','system_admin']);
+            User::where('is_active',true)->whereIn('role',$roles)->where('id','<>',$case->reported_by)->get()->each(fn(User $user)=>$recipients->put($user->id,$user));
+        }
+
+        foreach($recipients as $recipient) {
+            UserNotification::create([
+                'user_id'=>$recipient->id,'title'=>$title,'message'=>$message,
+                'category'=>$category,
+            ]);
+        }
+    }}
