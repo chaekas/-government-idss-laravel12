@@ -30,7 +30,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email', 'max:180', 'unique:users,email'],
             'role' => ['required', 'in:farmer,field_officer,laboratory_technician,laboratory_manager,regional_veterinary_officer,zonal_laboratory_administrator,mlf_officer,system_admin'],
-            'farmer_id' => ['nullable', 'required_if:role,farmer', 'exists:farmers,id', 'unique:users,farmer_id'],
+            'farmer_id' => ['exclude_unless:role,farmer', 'required', 'integer', 'exists:farmers,id', 'unique:users,farmer_id'],
             'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
 
@@ -59,7 +59,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email', 'max:180', 'unique:users,email,'.$user->id],
             'role' => ['required', 'in:farmer,field_officer,laboratory_technician,laboratory_manager,regional_veterinary_officer,zonal_laboratory_administrator,mlf_officer,system_admin'],
-            'farmer_id' => ['nullable', 'required_if:role,farmer', 'exists:farmers,id', 'unique:users,farmer_id,'.$user->id],
+            'farmer_id' => ['exclude_unless:role,farmer', 'required', 'integer', 'exists:farmers,id', 'unique:users,farmer_id,'.$user->id],
             'is_active' => ['required', 'boolean'],
             'password' => ['nullable', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
