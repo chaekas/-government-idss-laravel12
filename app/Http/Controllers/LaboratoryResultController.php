@@ -34,6 +34,13 @@ class LaboratoryResultController extends Controller
             'numeric_unit' => ['nullable', 'string', 'max:50'],
             'technician_comments' => ['nullable', 'string', 'max:3000'],
         ]);
+        $sample = Sample::findOrFail($data['sample_id']);
+        if ($sample->quality_status !== 'accepted' || $sample->transport_status !== 'received') {
+            throw ValidationException::withMessages(['sample_id' => 'The sample must be received by a laboratory and quality-accepted before testing.']);
+        }
+        if ($sample->laboratory_id && (int) $sample->laboratory_id !== (int) $data['laboratory_id']) {
+            throw ValidationException::withMessages(['laboratory_id' => 'The selected laboratory does not match the sample destination.']);
+        }
         $data['result_code'] = 'LAB-'.now()->format('ymd').'-'.Str::upper(Str::random(6));
         $data['assigned_technician'] = $request->user()->id;
         $data['status'] = 'submitted_for_review';
@@ -47,7 +54,7 @@ class LaboratoryResultController extends Controller
     public function approve(Request $request, LaboratoryTestResult $result)
     {
         abort_unless(in_array($request->user()->role, ['laboratory_manager', 'system_admin', 'administrator', 'admin'], true), 403);
-        $data = $request->validate(['decision' => ['required', 'in:approve,reject'], 'review_comments' => ['required', 'string', 'max:3000']]);
+        abort_unless($result->status === 'submitted_for_review', 422, 'Only results awaiting review can be approved or rejected.');\n        $data = $request->validate(['decision' => ['required', 'in:approve,reject'], 'review_comments' => ['required', 'string', 'max:3000']]);
         $result->update(['reviewed_by' => $request->user()->id, 'review_comments' => $data['review_comments'], 'status' => $data['decision'] === 'approve' ? 'approved' : 'rejected', 'approved_at' => $data['decision'] === 'approve' ? now() : null]);
         if ($data['decision'] === 'approve') {
             $result->sample()->update(['test_status' => 'approved', 'result_summary' => $result->qualitative_result ?: $result->observations, 'approved_at' => now()]);
