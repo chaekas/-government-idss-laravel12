@@ -19,7 +19,7 @@ class OutbreakController extends Controller
 {
     public function index(Request $request)
     {
-        $query=Outbreak::with(['diseaseCases.farm','diseaseCategory'])->when($request->filled('q'),function($q)use($request){
+        $query=Outbreak::with(['diseaseCases.farm','diseaseCategory','statusHistory.changedBy'])->when($request->filled('q'),function($q)use($request){
             $term='%'.$request->string('q')->toString().'%';
             $q->where(fn($n)=>$n->where('outbreak_code','like',$term)->orWhere('disease_name','like',$term)->orWhere('district','like',$term)->orWhere('region','like',$term));
         })->when($request->filled('status'),fn($q)=>$q->where('status',$request->string('status')->toString()))->latest();
