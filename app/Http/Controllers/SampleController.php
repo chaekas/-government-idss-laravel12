@@ -58,8 +58,8 @@ class SampleController extends Controller
     {
         return view('samples.create', [
             'cases' => DiseaseCase::with('farm')
-                ->whereNotIn('status', ['closed'])
-                ->whereHas('investigation', fn ($investigations) => $investigations->where('status', '!=', 'closed'))
+                ->whereIn('status', ['reported','under_investigation','sample_collected'])
+                ->whereHas('investigation', fn ($investigations) => $investigations->whereIn('status', ['under_investigation','sample_collected']))
                 ->latest()
                 ->get(),
             'laboratories' => Laboratory::where('is_active', true)->orderBy('name')->get(),
@@ -205,6 +205,10 @@ class SampleController extends Controller
         }
 
         $sample->update($updates);
+        if ($event === 'testing_started') {
+            $case = $sample->diseaseCase;
+            if ($case) DiseaseCaseWorkflow::transition($case, 'laboratory_testing', $request->user()->id, 'Laboratory examination started for sample '.$sample->sample_code.'.');
+        }
         $this->recordMovement($sample, $request, $event, $fromLocation, $toLocation, $data['notes'] ?? null, $data['received_by'] ?? null, $data['condition_on_transfer'] ?? null);
         $this->audit($request, 'sample.'.$event, $sample, 'Sample '.$sample->sample_code.': '.$event.($data['rejection_reason'] ?? ''));
 
