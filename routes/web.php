@@ -97,11 +97,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:laboratory_technician,laboratory_manager,zonal_laboratory_administrator,mlf_officer,system_admin,administrator,admin')->group(function () {
         Route::get('/laboratory', [LaboratoryResultController::class, 'index'])->name('laboratory.index');
     });
-    Route::middleware('role:laboratory_technician,system_admin,administrator,admin')->group(function () {
+    Route::middleware('role:laboratory_technician')->group(function () {
         Route::get('/laboratory/create', [LaboratoryResultController::class, 'create'])->name('laboratory.create');
         Route::post('/laboratory', [LaboratoryResultController::class, 'store'])->name('laboratory.store');
     });
-    Route::middleware('role:laboratory_manager,system_admin')->group(function () {
+    Route::middleware('role:laboratory_manager,system_admin,administrator,admin')->group(function () {
         Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
     });
 
