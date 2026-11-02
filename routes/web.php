@@ -16,6 +16,7 @@ use App\Http\Controllers\LaboratoryResultController;
 use App\Http\Controllers\OutbreakController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SampleController;
+use App\Http\Controllers\SurveillanceAttachmentController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,8 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+    Route::get('/surveillance/case-attachments/{attachment}', [SurveillanceAttachmentController::class, 'caseFile'])->name('surveillance.case-attachments.show');
+    Route::get('/surveillance/investigation-attachments/{attachment}', [SurveillanceAttachmentController::class, 'investigationFile'])->name('surveillance.investigation-attachments.show');
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     // Each account can only read and update its own notification inbox.
