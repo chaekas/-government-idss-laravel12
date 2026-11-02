@@ -110,8 +110,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/gis', [GISController::class, 'index'])->name('gis.index');
     });
 
-    // Only the system administrator manages accounts and reviews audit records.
-    Route::middleware('role:system_admin')->group(function () {
+    // Accept the legacy administrator role labels used by existing seeded accounts.
+    // Public registration still cannot assign any of these privileged roles.
+    Route::middleware('role:system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
