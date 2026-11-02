@@ -122,5 +122,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::put('/users/{user}/password', [UserController::class, 'resetPassword'])->name('users.password.reset');
         Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
+        Route::get('/master-data/{type}', [MasterDataController::class, 'index'])->name('master-data.index');
+        Route::get('/master-data/{type}/create', [MasterDataController::class, 'create'])->name('master-data.create');
+        Route::post('/master-data/{type}', [MasterDataController::class, 'store'])->name('master-data.store');
+        Route::get('/master-data/{type}/{record}/edit', [MasterDataController::class, 'edit'])->name('master-data.edit');
+        Route::put('/master-data/{type}/{record}', [MasterDataController::class, 'update'])->name('master-data.update');
+        Route::delete('/master-data/{type}/{record}', [MasterDataController::class, 'destroy'])->name('master-data.destroy');
     });
 });
