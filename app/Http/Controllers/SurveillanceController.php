@@ -7,6 +7,7 @@ use App\Models\Investigation;
 use App\Models\LaboratoryTestResult;
 use App\Models\Outbreak;
 use App\Models\Sample;
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 
 class SurveillanceController extends Controller
@@ -43,6 +44,8 @@ class SurveillanceController extends Controller
             'statusCounts'=>$statusCounts,'diseaseCounts'=>$diseaseCounts,'speciesCounts'=>$speciesCounts,'hotspots'=>$hotspots,'monthlyTrend'=>$monthlyTrend,
             'averageTurnaroundHours'=>$turnaroundHours->isNotEmpty()?round($turnaroundHours->avg(),1):null,
             'releasedSamples'=>$turnaroundHours->count(),
+            'unreadAlerts'=>UserNotification::where('user_id',$request->user()->id)->whereNull('read_at')->whereIn('category',['surveillance','outbreak'])->count(),
+            'recentAlerts'=>UserNotification::where('user_id',$request->user()->id)->whereIn('category',['surveillance','outbreak'])->latest()->take(8)->get(),
             'outbreaksByRegion'=>Outbreak::whereIn('status',['suspected','active'])->selectRaw('region, district, COUNT(*) as total')->groupBy('region','district')->orderByDesc('total')->limit(10)->get(),
         ]);
     }
