@@ -159,4 +159,27 @@ class RoleAccessTest extends TestCase
             ->get(route('users.index'))
             ->assertOk();
     }
+    public function test_system_administrator_cannot_demote_or_deactivate_themselves(): void
+    {
+        $admin = $this->makeUser('system_admin');
+
+        $this->actingAs($admin)
+            ->put(route('users.update', $admin), [
+                'name' => $admin->name,
+                'email' => $admin->email,
+                'role' => 'field_officer',
+                'farmer_id' => null,
+                'is_active' => 1,
+                'password' => '',
+                'password_confirmation' => '',
+            ])
+            ->assertSessionHasErrors('role');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $admin->id,
+            'role' => 'system_admin',
+            'is_active' => true,
+        ]);
+    }
+
 }
