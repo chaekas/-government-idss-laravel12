@@ -35,7 +35,7 @@ class DatabaseMasterDataTest extends TestCase
             'farm_types', 'farmer_farm', 'farmer_ownership_history', 'species', 'breeds',
             'animal_identifications', 'animal_movements', 'animal_ownership_transfers',
             'vaccination_campaigns', 'vaccinations', 'disease_categories', 'disease_symptoms',
-            'animal_disease_records', 'laboratory_sections', 'laboratory_tests', 'test_methods',
+            'animal_disease_records', 'laboratory_sections', 'laboratory_tests', 'test_methods', 'farm_locations', 'laboratory_user', 'laboratory_test_assignments', 'disease_case_symptom', 'outbreak_case', 'report_definitions', 'generated_reports', 'dashboard_definitions', 'system_settings',
             'sample_types', 'sample_transportations', 'sample_storage_records',
             'quality_control_records', 'laboratory_equipment',
         ] as $table) {
@@ -50,6 +50,7 @@ class DatabaseMasterDataTest extends TestCase
         $this->assertTrue(Schema::hasColumn('animals', 'farmer_id'));
         $this->assertTrue(Schema::hasColumn('animals', 'colour'));
         $this->assertTrue(Schema::hasColumn('disease_cases', 'animal_id'));
+        $this->assertTrue(Schema::hasColumn('samples', 'sample_type_id'));
     }
 
     public function test_reference_seeders_are_repeatable_and_seed_only_srs_defined_roles_and_farm_types(): void
@@ -75,6 +76,7 @@ class DatabaseMasterDataTest extends TestCase
         ]);
 
         $this->assertCount(2, $farm->fresh()->farmers);
+        $this->assertSame(2, $first->fresh()->farms()->count());
     }
 
     public function test_administrator_can_create_master_data_and_action_is_audited(): void
