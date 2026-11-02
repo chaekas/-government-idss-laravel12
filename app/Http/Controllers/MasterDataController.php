@@ -55,7 +55,8 @@ class MasterDataController extends Controller
     public function create(string $type)
     {
         $definition = $this->definition($type);
-        return view('master-data.form', compact('type', 'definition'));
+        $options = $this->formOptions();
+        return view('master-data.form', compact('type', 'definition', 'options'));
     }
 
     public function store(Request $request, string $type)
@@ -63,7 +64,8 @@ class MasterDataController extends Controller
         $definition = $this->definition($type);
         $data = $this->validatedData($request, $type);
         $modelClass = $definition['model'];
-        $modelClass::create($data);
+        $record = $modelClass::create($data);
+        $this->audit($request, 'master_data.created', $type, $record->getKey());
         return redirect()->route('master-data.index', $type)->with('status', $definition['title'].' record created.');
     }
 
@@ -71,7 +73,8 @@ class MasterDataController extends Controller
     {
         $definition = $this->definition($type);
         $item = $definition['model']::findOrFail($record);
-        return view('master-data.form', compact('type', 'definition', 'item'));
+        $options = $this->formOptions();
+        return view('master-data.form', compact('type', 'definition', 'item', 'options'));
     }
 
     public function update(Request $request, string $type, int $record)
@@ -79,15 +82,39 @@ class MasterDataController extends Controller
         $definition = $this->definition($type);
         $item = $definition['model']::findOrFail($record);
         $item->update($this->validatedData($request, $type, $item->getKey()));
+        $this->audit($request, 'master_data.updated', $type, $item->getKey());
         return redirect()->route('master-data.index', $type)->with('status', $definition['title'].' record updated.');
     }
 
-    public function destroy(string $type, int $record)
+    public function destroy(Request $request, string $type, int $record)
     {
         $definition = $this->definition($type);
         $item = $definition['model']::findOrFail($record);
         $item->delete();
+        $this->audit($request, 'master_data.archived', $type, $item->getKey());
         return redirect()->route('master-data.index', $type)->with('status', 'Reference record archived.');
+    }
+
+    private function formOptions(): array
+    {
+        return [
+            'species' => Species::orderBy('name')->get(['id', 'name']),
+            'diseaseCategories' => DiseaseCategory::orderBy('name')->get(['id', 'name']),
+            'administrativeAreas' => AdministrativeArea::orderBy('name')->get(['id', 'name', 'area_type']),
+        ];
+    }
+
+    private function audit(Request $request, string $action, string $type, int $id): void
+    {
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => $action,
+            'entity_type' => 'master_data:'.$type,
+            'entity_id' => (string) $id,
+            'ip_address' => $request->ip(),
+            'description' => ucfirst(str_replace('-', ' ', $type)).' reference record '.$action,
+            'created_at' => now(),
+        ]);
     }
 
     private function validatedData(Request $request, string $type, ?int $ignoreId = null): array
