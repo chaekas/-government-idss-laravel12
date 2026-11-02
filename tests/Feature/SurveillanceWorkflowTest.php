@@ -125,6 +125,13 @@ class SurveillanceWorkflowTest extends TestCase
         $this->assertDatabaseHas('sample_movements', ['sample_id' => $sample->id, 'event_type' => 'collected']);
 
         $this->actingAs($officer)->put(route('samples.update', $sample), [
+            'event_type' => 'packaged',
+            'condition_on_transfer' => 'Sealed, leak-proof sample container',
+            'notes' => 'Sample packaged according to SOP.',
+        ])->assertRedirect(route('samples.index'));
+        $this->assertNotNull($sample->fresh()->packaged_at);
+
+        $this->actingAs($officer)->put(route('samples.update', $sample), [
             'event_type' => 'dispatched',
             'to_location' => $laboratory->name,
             'condition_on_transfer' => 'Sealed, chilled transport container',
@@ -152,6 +159,12 @@ class SurveillanceWorkflowTest extends TestCase
             'assigned_technician' => $technician->id,
         ])->assertRedirect(route('samples.index'));
         $this->assertSame($technician->id, $sample->fresh()->assigned_technician);
+
+        $this->actingAs($technician)->put(route('samples.update', $sample), [
+            'event_type' => 'testing_started',
+            'notes' => 'Assigned technician started examination.',
+        ])->assertRedirect(route('samples.index'));
+        $this->assertSame('in_progress', $sample->fresh()->test_status);
 
         $this->actingAs($technician)->post(route('laboratory.store'), [
             'sample_id' => $sample->id,
