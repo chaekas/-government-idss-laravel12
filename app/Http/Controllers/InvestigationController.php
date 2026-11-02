@@ -58,7 +58,7 @@ class InvestigationController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
-        abort_unless(!in_array($investigation->status, ['closed', 'completed'], true), 422, 'Completed or closed investigations are locked. Create an authorized follow-up record if further action is required.');
+        abort_unless(!in_array($investigation->status, ['closed'], true), 422, 'Closed investigations are locked. Create an authorized follow-up record if further action is required.');
         $investigation->update($data);
         if ($data['status'] === 'sample_collected') {
             $investigation->diseaseCase()->update(['status' => 'sample_collected']);
