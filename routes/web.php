@@ -6,6 +6,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiseaseCaseController;
 use App\Http\Controllers\FarmController;
+use App\Http\Controllers\GISController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\FarmerController;
 use App\Http\Controllers\InvestigationController;
 use App\Http\Controllers\LaboratoryController;
