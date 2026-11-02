@@ -17,7 +17,7 @@ use App\Services\DiseaseCaseWorkflow;
 
 class InvestigationController extends Controller
 {
-    private const ASSIGNEE_ROLES=['field_officer','regional_veterinary_officer'];
+    private const ASSIGNEE_ROLES=['field_officer'];
     private const APPROVER_ROLES=['regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'];
 
     public function index(Request $request)
