@@ -58,8 +58,8 @@
             @endif
 
             @if($isAdmin)
+                <a class="{{ request()->routeIs('users.*')?'active':'' }}" href="{{ route('users.index') }}">♙ Users management</a>
                 <a class="{{ request()->routeIs('audit.*')?'active':'' }}" href="{{ route('audit.index') }}">▤ Audit trail</a>
-                <a class="{{ request()->routeIs('users.*')?'active':'' }}" href="{{ route('users.index') }}">♙ User management</a>
             @endif
         </nav>
         <div class="side-foot">● Surveillance workspace</div>
