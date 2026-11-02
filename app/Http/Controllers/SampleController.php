@@ -42,7 +42,7 @@ class SampleController extends Controller
         $data['test_status'] = 'pending';
         $sample = Sample::create($data);
         SampleMovement::create(['sample_id' => $sample->id, 'event_type' => 'collected', 'from_location' => 'Field collection', 'to_location' => $sample->laboratory?->name, 'notes' => $data['collection_notes'] ?? null, 'recorded_by' => $request->user()->id, 'event_at' => now()]);
-        $sample->diseaseCase()->update(['status' => 'under_investigation']);
+        $sample->diseaseCase()->update(['status' => 'sample_collected']);
         AuditLog::create(['user_id' => $request->user()->id, 'action' => 'sample.collected', 'entity_type' => 'sample', 'entity_id' => (string) $sample->id, 'ip_address' => $request->ip(), 'description' => 'Collected sample '.$code, 'created_at' => now()]);
         return redirect()->route('samples.index')->with('status', 'Sample registered. Sample ID: '.$code);
     }
