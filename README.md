@@ -23,7 +23,11 @@ Integrated Disease Surveillance System (IDSS) for the Ministry of Livestock and 
 - Laboratory result review/approval restricted to laboratory managers and system administrators.
 - Outbreak register with disease, location, case/death counts, severity, coordinates, and response notes.
 - Administrator-only user management: create accounts, assign roles, link farmer accounts to their registered farmer record, update profiles, deactivate accounts, and reset passwords.
-- Audit entries for disease case reporting, user administration, animal registration, investigations, sample movements, laboratory results, and outbreak creation.\n- Role-gated reporting dashboard with date-filtered CSV exports for disease cases and sample tracking.\n- Authenticated GIS map for farms, cases with georeferenced farms, and outbreak records where coordinates have been entered.\n- Farmer accounts are scoped to their linked farm(s) for case listing, reporting, and dashboard counts; staff-only modules are protected by role middleware.\n- Laboratory results cannot be approved by the same account that performed the test.
+- Audit entries for disease case reporting, user administration, animal registration, investigations, sample movements, laboratory results, and outbreak creation.
+- Role-gated reporting dashboard with date-filtered CSV exports for disease cases and sample tracking.
+- Authenticated GIS map for farms, cases with georeferenced farms, and outbreak records where coordinates have been entered.
+- Farmer accounts are scoped to their linked farm(s) for case listing, reporting, and dashboard counts; staff-only modules are protected by role middleware.
+- Laboratory results cannot be approved by the same account that performed the test.
 - Automated test configuration and feature tests.
 
 ### Important workflow rules
