@@ -12,8 +12,8 @@ This matrix tracks the current Laravel repository against the supplied Software 
 | Poultry/animal registry | Foundation implemented | Animal ID, farm link, species and external ID. Add batch/flock inventory, ownership history and UTAMBUZI identifier mapping. |
 | Disease reporting | Foundation implemented | Validated case reporting and listing. Add complete lifecycle transitions and case attachments. |
 | Disease investigation | Foundation implemented | Assignment, field observations, findings, recommendations and coordinates. Add investigation approval/sign-off and role-based assignment rules. |
-| Sample collection and tracking | Foundation implemented | Generated sample code/barcode value, collection, movement history, transport and quality statuses. Add printable barcode labels and formal chain-of-custody sign-off. |
-| Laboratory registry, tests and results | Foundation implemented | Facility registration, result entry, review and approval workflow. Add test catalogue, repeat tests, attachments, QC, equipment/reagent records and immutable approved reports. |
+| Sample collection and tracking | Workflow foundation implemented | Generated Sample ID/barcode and lab reference; collection → packaging → dispatch/in transit → laboratory receipt → QC accept/reject → lab section/technician assignment → examination start → test submission → independent manager review → final result release. Custody movements, audit records, and in-app notifications are recorded. Printable barcode labels, signed custody receipts, and region/lab-level scoping still need completion. |
+| Laboratory registry, tests and results | Workflow foundation implemented | Assigned technicians can record findings; laboratory managers independently review; rejected results return for correction/repeat; final sample release waits until the latest recorded result for each test is approved. Add master test catalogue, result attachments, formal QC records, equipment/reagent records, electronic signatures and immutable report documents. |
 | Outbreak monitoring | Foundation implemented | Outbreak register with location, counts, severity and response notes. Add linkage to cases, alert thresholds and response lifecycle. |
 | Notifications | Partial | In-app notifications are generated for outbreak records, sample arrival/quality events, and laboratory result review. Approved SMS/email delivery is not configured. |
 | Dashboards and reports | Partial | Counts and recent cases shown. Add full surveillance/laboratory indicators, filters, PDF/Excel exports and scheduled reports. |
@@ -27,10 +27,11 @@ This matrix tracks the current Laravel repository against the supplied Software 
 1. Administrator creates accounts for a field officer, laboratory technician, and laboratory manager.
 2. Field officer registers a farmer and farm, then registers poultry/animals.
 3. Field officer reports a suspected disease case and records an investigation.
-4. Field officer registers a sample, dispatches it, and records laboratory receipt and quality acceptance.
-5. Laboratory technician records a test result and submits it for review.
-6. Laboratory manager approves or rejects the result with review comments.
-7. Dashboard shows updated surveillance counts and the audit trail records the actions.
-8. Verify that a non-administrator cannot manage accounts and a non-laboratory-manager cannot approve results.
-9. Verify that unapproved results are not represented as official confirmed diagnoses.
-10. Conduct stakeholder UAT and security review before production use.
+4. Field officer registers, packages, and dispatches the sample; the system records each chain-of-custody event.
+5. Laboratory staff record receipt and sample condition, then accept or reject the sample through quality control.
+6. Laboratory manager assigns the accepted sample to a laboratory section and an active technician.
+7. The assigned technician starts examination, records one or more tests, and submits findings for independent review.
+8. Laboratory manager approves or returns each result with comments; a returned result can be repeated and resubmitted.
+9. Once the latest recorded result for every test is approved, the system releases the final result, updates case status, records the release in the custody timeline, and notifies field, laboratory, regional, zonal and Ministry stakeholders.
+10. Verify role restrictions, audit trail, and that pending/unapproved results are not represented as final diagnoses.
+11. Conduct stakeholder UAT and security review before production use.
