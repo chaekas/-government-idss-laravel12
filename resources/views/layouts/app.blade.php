@@ -9,6 +9,7 @@
 <a class="{{ request()->routeIs('investigations.*')?'active':'' }}" href="{{ route('investigations.index') }}">◎ Investigations</a>
 <a class="{{ request()->routeIs('samples.*')?'active':'' }}" href="{{ route('samples.index') }}">◈ Samples & custody</a>
 <a class="{{ request()->routeIs('laboratory.*')?'active':'' }}" href="{{ route('laboratory.index') }}">⚗ Laboratory</a>
+@if(in_array(auth()->user()->role, ['system_admin','administrator','admin','mlf_officer','zonal_laboratory_administrator'], true))<a class="{{ request()->routeIs('laboratories.*')?'active':'' }}" href="{{ route('laboratories.index') }}">▣ Laboratory registry</a>@endif
 <a class="{{ request()->routeIs('outbreaks.*')?'active':'' }}" href="{{ route('outbreaks.index') }}">◉ Outbreaks</a>
 <a class="{{ request()->routeIs('notifications.*')?'active':'' }}" href="{{ route('notifications.index') }}">♢ Notifications</a>
 @if(in_array(auth()->user()->role, ['system_admin','administrator','admin'], true))<a class="{{ request()->routeIs('audit.*')?'active':'' }}" href="{{ route('audit.index') }}">▤ Audit trail</a>@endif
