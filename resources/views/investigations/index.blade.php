@@ -17,7 +17,7 @@
 <div class="field"><b>Biosecurity observations</b><p>{{ $inv->biosecurity_observations ?: 'Not recorded' }}</p></div>
 <div class="field"><b>Immediate control measures</b><p>{{ $inv->immediate_control_measures ?: 'Not recorded' }}</p></div>
 <div class="field full"><b>Recommendations</b><p>{{ $inv->recommended_actions ?: 'Not recorded' }}</p></div>
-<div class="field full"><b>Supporting evidence</b>@forelse($inv->attachments as $attachment)<p>{{ $attachment->original_name }} · {{ number_format($attachment->file_size/1024,1) }} KB</p>@empty<p>No attachments</p>@endforelse</div>
+<div class="field full"><b>Supporting evidence</b>@forelse($inv->attachments as $attachment)<p><a href="{{ route('surveillance.investigation-attachments.show',$attachment) }}">{{ $attachment->original_name }}</a> · {{ number_format($attachment->file_size/1024,1) }} KB</p>@empty<p>No attachments</p>@endforelse</div>
 <div class="field full"><b>Investigation history</b><ul>@foreach($inv->history as $history)<li>{{ $history->changed_at?->format('d M Y H:i') }} · {{ ucfirst($history->event_type) }} by {{ $history->changedBy?->name ?? 'System' }} — {{ $history->notes }}</li>@endforeach</ul></div>
 </div></details>
 @if(!$inv->approved_at)
