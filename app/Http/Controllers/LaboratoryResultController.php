@@ -15,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 
 class LaboratoryResultController extends Controller
 {
-    private const ADMIN_ROLES = ['system_admin', 'administrator', 'admin'];
+    private const ADMIN_ROLES = ['system_admin', 'super_admin', 'super-admin', 'administrator', 'admin'];
     private const LAB_REVIEW_ROLES = ['laboratory_manager', 'zonal_laboratory_administrator'];
 
     public function index(Request $request)
