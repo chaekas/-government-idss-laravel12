@@ -75,7 +75,7 @@ class UserController extends Controller
         if ($removingAdminAccess) {
             $otherActiveAdmins = User::where('role', 'system_admin')
                 ->where('is_active', true)
-                ->whereKeyNot($user->id)
+                ->where('id', '<>', $user->id)
                 ->count();
 
             if ($otherActiveAdmins < 1) {
