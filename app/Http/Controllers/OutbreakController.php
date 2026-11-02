@@ -74,7 +74,7 @@ class OutbreakController extends Controller
         $data['modified_by']=$request->user()->id;
         if($data['status']==='active' && !$outbreak->confirmed_at) $data['confirmed_at']=now();
         if($data['status']==='closed') $data['closed_at']=now();
-        DB::transaction(function()use($outbreak,$data,$caseIds,$request){
+        DB::transaction(function()use($outbreak,$data,$caseIds,$request,$previousStatus){
             $outbreak->update($data); $outbreak->diseaseCases()->sync($caseIds);
             if($previousStatus!==$outbreak->status) OutbreakStatusHistory::create(['outbreak_id'=>$outbreak->id,'from_status'=>$previousStatus,'to_status'=>$outbreak->status,'reason'=>$data['response_actions'] ?? null,'changed_by'=>$request->user()->id,'changed_at'=>now()]);
             AuditLog::create(['user_id'=>$request->user()->id,'action'=>'outbreak.updated','entity_type'=>'outbreak','entity_id'=>(string)$outbreak->id,'ip_address'=>$request->ip(),'description'=>'Updated outbreak '.$outbreak->outbreak_code.' to '.$outbreak->status,'created_at'=>now()]);
