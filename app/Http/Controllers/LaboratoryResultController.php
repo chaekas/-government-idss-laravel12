@@ -57,6 +57,11 @@ class LaboratoryResultController extends Controller
     {
         abort_unless(in_array($request->user()->role, ['laboratory_manager', 'system_admin', 'administrator', 'admin'], true), 403);
         abort_unless($result->status === 'submitted_for_review', 422, 'Only results awaiting review can be approved or rejected.');
+        if ((int) $result->assigned_technician === (int) $request->user()->id) {
+            throw ValidationException::withMessages([
+                'decision' => 'The person who performed a laboratory test cannot approve or reject the same result. Assign an independent authorized reviewer.',
+            ]);
+        }
         $data = $request->validate(['decision' => ['required', 'in:approve,reject'], 'review_comments' => ['required', 'string', 'max:3000']]);
         $result->update(['reviewed_by' => $request->user()->id, 'review_comments' => $data['review_comments'], 'status' => $data['decision'] === 'approve' ? 'approved' : 'rejected', 'approved_at' => $data['decision'] === 'approve' ? now() : null]);
         if ($data['decision'] === 'approve') {
