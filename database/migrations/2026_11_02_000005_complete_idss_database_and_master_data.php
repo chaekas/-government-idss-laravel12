@@ -101,6 +101,8 @@ return new class extends Migration
             if (!Schema::hasColumn('farms', 'administrative_area_id')) $table->foreignId('administrative_area_id')->nullable()->constrained()->nullOnDelete();
             if (!Schema::hasColumn('farms', 'status')) $table->string('status', 30)->default('active')->index();
             if (!Schema::hasColumn('farms', 'archived_at')) $table->timestamp('archived_at')->nullable()->index();
+            if (!Schema::hasColumn('farms', 'duplicate_verified_at')) $table->timestamp('duplicate_verified_at')->nullable();
+            if (!Schema::hasColumn('farms', 'duplicate_verified_by')) $table->foreignId('duplicate_verified_by')->nullable()->constrained('users')->nullOnDelete();
         });
         Schema::create('farmer_farm', function (Blueprint $table) {
             $table->id(); $table->foreignId('farmer_id')->constrained()->restrictOnDelete();
