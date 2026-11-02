@@ -49,7 +49,7 @@ class InvestigationController extends Controller
     public function update(Request $request, Investigation $investigation)
     {
         $data = $request->validate([
-            'assigned_to' => ['nullable', 'exists:users,id'],
+            'assigned_to' => ['nullable', Rule::exists('users', 'id')->where(fn ($query) => $query->whereIn('role', ['field_officer', 'regional_veterinary_officer', 'system_admin', 'administrator', 'admin']))],
             'status' => ['required', 'in:under_investigation,sample_collected,completed,closed'],
             'field_observations' => ['required', 'string', 'max:5000'],
             'epidemiological_findings' => ['nullable', 'string', 'max:5000'],
