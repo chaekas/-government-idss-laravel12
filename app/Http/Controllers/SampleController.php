@@ -9,6 +9,7 @@ use App\Models\Sample;
 use App\Models\SampleMovement;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Services\DiseaseCaseWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -99,7 +100,7 @@ class SampleController extends Controller
         $sample = Sample::create($data);
 
         $this->recordMovement($sample, $request, 'collected', 'Field collection', 'Field collection', trim('Destination laboratory: '.$laboratory->name.'. '.($data['collection_notes'] ?? '')));
-        $case->update(['status' => 'sample_collected']);
+        DiseaseCaseWorkflow::transition($case, 'sample_collected', $request->user()->id, 'A sample was registered against the active investigation.');
 
         $this->audit($request, 'sample.collected', $sample, 'Registered sample '.$code.' for '.$laboratory->name);
         $this->notifyStakeholders($sample, 'Sample registered', $code.' was collected by '.$request->user()->name.' and is awaiting dispatch to '.$laboratory->name.'.');
