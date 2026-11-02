@@ -76,8 +76,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/samples/create', [SampleController::class, 'create'])->name('samples.create');
         Route::post('/samples', [SampleController::class, 'store'])->name('samples.store');
     });
-    Route::middleware('role:laboratory_technician,laboratory_manager,zonal_laboratory_administrator,system_admin,administrator,admin')->group(function () {
+    Route::middleware('role:field_officer,regional_veterinary_officer,laboratory_technician,laboratory_manager,zonal_laboratory_administrator,system_admin,administrator,admin')->group(function () {
         Route::put('/samples/{sample}', [SampleController::class, 'update'])->name('samples.update');
+    });
+    Route::middleware('role:laboratory_manager,zonal_laboratory_administrator,system_admin,administrator,admin')->group(function () {
+        Route::put('/samples/{sample}/assign', [SampleController::class, 'assign'])->name('samples.assign');
     });
 
     // Laboratory registry administration.
