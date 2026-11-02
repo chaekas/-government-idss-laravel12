@@ -17,6 +17,7 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'create'])->name('login');
     Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:5,1')->name('login.store');
@@ -25,15 +26,30 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
-    Route::resource('farmers', FarmerController::class)->only(['index', 'create', 'store']);
-    Route::resource('farms', FarmController::class)->only(['index', 'create', 'store']);
-    Route::resource('cases', DiseaseCaseController::class)->only(['index', 'create', 'store']);
-    Route::resource('animals', AnimalController::class)->only(['index', 'create', 'store']);
-    Route::get('/investigations', [InvestigationController::class, 'index'])->name('investigations.index');
-    Route::get('/investigations/create', [InvestigationController::class, 'create'])->name('investigations.create');
-    Route::post('/investigations', [InvestigationController::class, 'store'])->name('investigations.store');
-    Route::put('/investigations/{investigation}', [InvestigationController::class, 'update'])->name('investigations.update');
-    Route::resource('samples', SampleController::class)->only(['index', 'create', 'store', 'update']);
+
+    // A farmer can only access their own notification inbox and case-reporting workflow.
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::put('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+
+    Route::middleware('role:farmer,field_officer,regional_veterinary_officer,mlf_officer,system_admin,administrator,admin')->group(function () {
+        Route::resource('cases', DiseaseCaseController::class)->only(['index', 'create', 'store']);
+    });
+
+    Route::middleware('role:field_officer,regional_veterinary_officer,mlf_officer,system_admin,administrator,admin')->group(function () {
+        Route::resource('farmers', FarmerController::class)->only(['index', 'create', 'store']);
+        Route::resource('farms', FarmController::class)->only(['index', 'create', 'store']);
+        Route::resource('animals', AnimalController::class)->only(['index', 'create', 'store']);
+        Route::get('/investigations', [InvestigationController::class, 'index'])->name('investigations.index');
+        Route::get('/investigations/create', [InvestigationController::class, 'create'])->name('investigations.create');
+        Route::post('/investigations', [InvestigationController::class, 'store'])->name('investigations.store');
+        Route::put('/investigations/{investigation}', [InvestigationController::class, 'update'])->name('investigations.update');
+        Route::resource('outbreaks', OutbreakController::class)->only(['index', 'create', 'store']);
+    });
+
+    Route::middleware('role:field_officer,laboratory_technician,laboratory_manager,zonal_laboratory_administrator,mlf_officer,system_admin,administrator,admin')->group(function () {
+        Route::resource('samples', SampleController::class)->only(['index', 'create', 'store', 'update']);
+    });
+
     Route::middleware('role:system_admin,administrator,admin,mlf_officer,zonal_laboratory_administrator')->group(function () {
         Route::get('/laboratories', [LaboratoryController::class, 'index'])->name('laboratories.index');
         Route::get('/laboratories/create', [LaboratoryController::class, 'create'])->name('laboratories.create');
@@ -46,9 +62,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/laboratory', [LaboratoryResultController::class, 'store'])->name('laboratory.store');
         Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
     });
-    Route::resource('outbreaks', OutbreakController::class)->only(['index', 'create', 'store']);
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::put('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
 
     Route::middleware('role:system_admin,administrator,admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
