@@ -20,13 +20,7 @@ return new class extends Migration
             $table->string('code')->unique(); $table->string('name'); $table->boolean('is_active')->default(true);
             $table->timestamps(); $table->softDeletes();
         });
-        Schema::create('offices', function (Blueprint $table) {
-            $table->id(); $table->foreignId('organization_id')->nullable()->constrained()->restrictOnDelete();
-            $table->foreignId('department_id')->nullable()->constrained()->restrictOnDelete();
-            $table->foreignId('administrative_area_id')->nullable()->constrained('administrative_areas')->nullOnDelete();
-            $table->string('code')->unique(); $table->string('name'); $table->string('office_type', 80)->nullable();
-            $table->boolean('is_active')->default(true); $table->timestamps(); $table->softDeletes();
-        });
+
         Schema::create('roles', function (Blueprint $table) {
             $table->id(); $table->string('name')->unique(); $table->string('label');
             $table->text('description')->nullable(); $table->boolean('is_system')->default(true);
@@ -280,3 +274,11 @@ return new class extends Migration
         // depend on these tables. Rollback is handled by a forward corrective migration.
     }
 };
+
+        Schema::create('offices', function (Blueprint $table) {
+            $table->id(); $table->foreignId('organization_id')->nullable()->constrained()->restrictOnDelete();
+            $table->foreignId('department_id')->nullable()->constrained()->restrictOnDelete();
+            $table->foreignId('administrative_area_id')->nullable()->constrained('administrative_areas')->nullOnDelete();
+            $table->string('code')->unique(); $table->string('name'); $table->string('office_type', 80)->nullable();
+            $table->boolean('is_active')->default(true); $table->timestamps(); $table->softDeletes();
+        });
