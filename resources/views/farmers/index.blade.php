@@ -1,6 +1,13 @@
 @extends('layouts.app')
 @section('title','Farmers')
 @section('content')
-<div class="heading"><div><small class="kicker">REGISTRY / FARMER MANAGEMENT</small><h1>Farmer registry</h1><p>Maintain a traceable register of poultry farmers.</p></div><a class="button primary" href="{{ route('farmers.create') }}">＋ Register farmer</a></div>
-<section class="panel"><div class="panel-head"><div><h2>Registered farmers</h2><p>{{ $farmers->total() }} records</p></div></div>@if($farmers->isEmpty())<div class="empty"><b>No farmers registered</b><p>Register the first farmer to start the registry.</p><a class="button primary" href="{{ route('farmers.create') }}">Register farmer</a></div>@else<div class="table-wrap"><table><thead><tr><th>Farmer code</th><th>Full name</th><th>Contact</th><th>Region</th><th>District</th><th>Registered</th></tr></thead><tbody>@foreach($farmers as $farmer)<tr><td>{{ $farmer->farmer_code }}</td><td><b>{{ $farmer->full_name }}</b></td><td>{{ $farmer->phone ?: $farmer->email ?: '—' }}</td><td>{{ $farmer->region }}</td><td>{{ $farmer->district }}</td><td>{{ $farmer->created_at->format('d M Y') }}</td></tr>@endforeach</tbody></table></div><div class="pagination">{{ $farmers->links() }}</div>@endif</section>
+<div class="heading"><div><small class="kicker">REGISTRY / FARMER MANAGEMENT</small><h1>Farmer registry</h1><p>Maintain a searchable, traceable register of poultry farmers.</p></div><a class="button primary" href="{{ route('farmers.create') }}">＋ Register farmer</a></div>
+<section class="panel">
+<form method="GET" class="toolbar"><input name="q" value="{{ request('q') }}" placeholder="Search Farmer ID, national ID, phone or name"><button class="button secondary" type="submit">Search</button></form>
+<div class="panel-head"><div><h2>Registered farmers</h2><p>{{ $farmers->total() }} records</p></div></div>
+@if($farmers->isEmpty())<div class="empty"><b>No farmers registered</b><p>Register the first farmer to start the registry.</p><a class="button primary" href="{{ route('farmers.create') }}">Register farmer</a></div>@else
+<div class="table-wrap"><table><thead><tr><th>Farmer ID</th><th>Full name</th><th>Contact</th><th>Region</th><th>District</th><th>Status</th><th>Registered</th></tr></thead><tbody>
+@foreach($farmers as $farmer)<tr><td>{{ $farmer->farmer_code }}</td><td><b>{{ $farmer->full_name }}</b></td><td>{{ $farmer->phone ?: $farmer->email ?: '—' }}</td><td>{{ $farmer->region }}</td><td>{{ $farmer->district }}</td><td>{{ ucfirst($farmer->status ?? 'active') }}</td><td>{{ $farmer->created_at->format('d M Y') }}</td></tr>@endforeach
+</tbody></table></div><div class="pagination">{{ $farmers->links() }}</div>@endif
+</section>
 @endsection

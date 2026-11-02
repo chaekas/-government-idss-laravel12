@@ -1,15 +1,17 @@
 @extends('layouts.app')
 @section('title','Register animal')
 @section('content')
-<div class="heading"><div><small class="kicker">TRACEABILITY / REGISTRATION</small><h1>Register animal</h1><p>An Animal ID will be generated when the record is saved.</p></div></div>
+<div class="heading"><div><small class="kicker">TRACEABILITY / REGISTRATION</small><h1>Register animal</h1><p>An Animal ID will be generated and linked to the selected farm and its registered farmer.</p></div></div>
 <form method="POST" action="{{ route('animals.store') }}" class="panel form-panel">@csrf<h2>Animal details</h2><div class="form-grid">
-<div class="field full"><label for="farm_id">Farm *</label><select id="farm_id" name="farm_id" required><option value="">Select registered farm</option>@foreach($farms as $farm)<option value="{{ $farm->id }}" @selected(old('farm_id')==$farm->id)>{{ $farm->farm_code }} — {{ $farm->name }}</option>@endforeach</select></div>
-<div class="field"><label for="species">Species *</label><input id="species" name="species" value="{{ old('species','poultry') }}" required></div>
-<div class="field"><label for="breed">Breed</label><input id="breed" name="breed" value="{{ old('breed') }}"></div>
-<div class="field"><label for="sex">Sex</label><select id="sex" name="sex"><option value="unknown">Unknown</option><option value="female">Female</option><option value="male">Male</option></select></div>
+<div class="field full"><label for="farm_id">Farm *</label><select id="farm_id" name="farm_id" required><option value="">Select registered farm</option>@foreach($farms as $farm)<option value="{{ $farm->id }}" @selected(old('farm_id')==$farm->id)>{{ $farm->farm_code }} — {{ $farm->name }} ({{ $farm->farmer?->full_name ?? 'Farmer not linked' }})</option>@endforeach</select></div>
+<div class="field"><label for="species_id">Species catalogue</label><select id="species_id" name="species_id"><option value="">Use manual species name</option>@foreach($speciesOptions as $species)<option value="{{ $species->id }}" @selected(old('species_id')==$species->id)>{{ $species->name }}</option>@endforeach</select></div>
+<div class="field"><label for="species">Species name *</label><input id="species" name="species" value="{{ old('species') }}" placeholder="Enter species or select catalogue above"></div>
+<div class="field"><label for="breed_id">Breed catalogue</label><select id="breed_id" name="breed_id"><option value="">Use manual breed name</option>@foreach($breedOptions as $breed)<option value="{{ $breed->id }}" @selected(old('breed_id')==$breed->id)>{{ $breed->species?->name }} — {{ $breed->name }}</option>@endforeach</select></div>
+<div class="field"><label for="breed">Breed name</label><input id="breed" name="breed" value="{{ old('breed') }}"></div>
+<div class="field"><label for="sex">Sex</label><select id="sex" name="sex"><option value="unknown" @selected(old('sex','unknown')==='unknown')>Unknown</option><option value="female" @selected(old('sex')==='female')>Female</option><option value="male" @selected(old('sex')==='male')>Male</option></select></div>
 <div class="field"><label for="date_of_birth">Date of birth / hatch</label><input type="date" id="date_of_birth" name="date_of_birth" max="{{ now()->toDateString() }}" value="{{ old('date_of_birth') }}"></div>
-<div class="field"><label for="identification_method">Identification method</label><input id="identification_method" name="identification_method" placeholder="Tag, ring, flock batch, etc."></div>
-<div class="field"><label for="external_identifier">External identifier</label><input id="external_identifier" name="external_identifier" value="{{ old('external_identifier') }}"></div>
+<div class="field"><label for="identification_method">Identification method</label><input id="identification_method" name="identification_method" value="{{ old('identification_method') }}" placeholder="RFID, ear tag, microchip, tattoo, QR code"></div>
+<div class="field"><label for="external_identifier">Tag / external identifier</label><input id="external_identifier" name="external_identifier" value="{{ old('external_identifier') }}"></div>
 <div class="field full"><label for="notes">Notes</label><textarea id="notes" name="notes" rows="3">{{ old('notes') }}</textarea></div>
 </div><div class="actions"><a class="button secondary" href="{{ route('animals.index') }}">Cancel</a><button class="button primary">Save animal</button></div></form>
 @endsection

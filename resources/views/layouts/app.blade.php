@@ -59,6 +59,7 @@
 
             @if($isAdmin)
                 <a class="{{ request()->routeIs('users.*')?'active':'' }}" href="{{ route('users.index') }}">♙ Users management</a>
+                <a class="{{ request()->routeIs('master-data.*')?'active':'' }}" href="{{ route('master-data.index', 'farm-types') }}">▧ Master data</a>
                 <a class="{{ request()->routeIs('audit.*')?'active':'' }}" href="{{ route('audit.index') }}">▤ Audit trail</a>
             @endif
         </nav>
