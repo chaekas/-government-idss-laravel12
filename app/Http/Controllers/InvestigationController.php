@@ -108,6 +108,14 @@ class InvestigationController extends Controller
         return redirect()->route('investigations.index')->with('status','Investigation updated and history recorded.');
     }
 
+    public function report(Request $request,Investigation $investigation)
+    {
+        $role=$request->user()->role;
+        abort_unless(in_array($role,['field_officer','regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'],true),403);
+        if($role==='field_officer') abort_unless((int)$investigation->assigned_to===(int)$request->user()->id || (int)$investigation->started_by===(int)$request->user()->id,403);
+        return view('investigations.report',['investigation'=>$investigation->load(['diseaseCase.farm','assignee','approver','attachments','history.changedBy'])]);
+    }
+
     public function approve(Request $request,Investigation $investigation)
     {
         abort_unless(in_array($request->user()->role,self::APPROVER_ROLES,true),403);
