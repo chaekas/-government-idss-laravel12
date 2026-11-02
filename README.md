@@ -5,7 +5,7 @@ Integrated Disease Surveillance System (IDSS) for the Ministry of Livestock and 
 ## Technology
 - Laravel 12 / PHP 8.2+
 - Blade templates and responsive HTML/CSS
-- MySQL for deployment; SQLite is supported for local Codespaces development and automated tests
+- PostgreSQL 14+ is the recommended production database per the SRS; SQLite is supported for local Codespaces development and automated tests
 - Server-rendered forms with Laravel validation, CSRF protection, session authentication, and authorization middleware
 
 ## Current implementation
@@ -107,7 +107,7 @@ This repository is an operational development foundation, not a certified produc
 - Diagnostic test master catalogue, sample quality control inspections, equipment calibration, corrective actions, and immutable approved-result records.
 - Real notification delivery through an approved SMS/email gateway; in-app notifications exist, but external SMS/email delivery is not configured.
 - PDF/XLSX generation, scheduled reporting, and complete executive/laboratory performance analytics. Current exports are CSV files that can be opened in spreadsheet software.
-- Interactive GIS maps, hotspot analysis, and map filtering.
+- Advanced GIS hotspot analysis, administrative-boundary overlays, and map filtering; the current map displays entered coordinates only.
 - UTAMBUZI integration, which cannot be activated until the Ministry provides the official API specification, authorized credentials, and test environment.
 - Password reset delivery, account lockout policy, configurable idle timeout, and additional security review.
 - Production database configuration (the SRS specifies PostgreSQL), HTTPS, backups, deployment monitoring, UAT, and formal acceptance.
