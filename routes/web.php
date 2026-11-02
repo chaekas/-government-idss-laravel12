@@ -31,10 +31,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/investigations', [InvestigationController::class, 'store'])->name('investigations.store');
     Route::put('/investigations/{investigation}', [InvestigationController::class, 'update'])->name('investigations.update');
     Route::resource('samples', SampleController::class)->only(['index', 'create', 'store', 'update']);
-    Route::get('/laboratory', [LaboratoryResultController::class, 'index'])->name('laboratory.index');
-    Route::get('/laboratory/create', [LaboratoryResultController::class, 'create'])->name('laboratory.create');
-    Route::post('/laboratory', [LaboratoryResultController::class, 'store'])->name('laboratory.store');
-    Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
+    Route::middleware('role:laboratory_technician,laboratory_manager,system_admin,administrator,admin')->group(function () {
+        Route::get('/laboratory', [LaboratoryResultController::class, 'index'])->name('laboratory.index');
+        Route::get('/laboratory/create', [LaboratoryResultController::class, 'create'])->name('laboratory.create');
+        Route::post('/laboratory', [LaboratoryResultController::class, 'store'])->name('laboratory.store');
+        Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
+    });
     Route::resource('outbreaks', OutbreakController::class)->only(['index', 'create', 'store']);
 
     Route::middleware('role:system_admin,administrator,admin')->group(function () {
