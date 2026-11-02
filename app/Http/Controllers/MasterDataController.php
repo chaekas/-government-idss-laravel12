@@ -81,7 +81,8 @@ class MasterDataController extends Controller
     public function update(Request $request, string $type, int $record)
     {
         $definition = $this->definition($type);
-        $item = $definition['model']::findOrFail($record);
+        $modelClass = $definition['model'];
+        $item = $modelClass::findOrFail($record);
         $item->update($this->validatedData($request, $type, $item->getKey()));
         $this->audit($request, 'master_data.updated', $type, $item->getKey());
         return redirect()->route('master-data.index', $type)->with('status', $definition['title'].' record updated.');
@@ -90,7 +91,8 @@ class MasterDataController extends Controller
     public function destroy(Request $request, string $type, int $record)
     {
         $definition = $this->definition($type);
-        $item = $definition['model']::findOrFail($record);
+        $modelClass = $definition['model'];
+        $item = $modelClass::findOrFail($record);
         $item->delete();
         $this->audit($request, 'master_data.archived', $type, $item->getKey());
         return redirect()->route('master-data.index', $type)->with('status', 'Reference record archived.');
