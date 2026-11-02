@@ -95,6 +95,7 @@ class DiseaseCaseController extends Controller
         ]);
 
         $farm=Farm::findOrFail($data['farm_id']);
+        if($request->user()->role==='farmer' && !$farm->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists()) throw ValidationException::withMessages(['farm_id'=>'You may only update a report to a farm linked to your farmer account.']);
         if (!empty($data['animal_id']) && !Animal::whereKey($data['animal_id'])->where('farm_id',$farm->id)->exists()) {
             throw ValidationException::withMessages(['animal_id'=>'The selected animal does not belong to the selected farm.']);
         }
