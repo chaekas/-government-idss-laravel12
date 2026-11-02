@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Services\DiseaseCaseWorkflow;
 
 class InvestigationController extends Controller
 {
@@ -62,7 +63,7 @@ class InvestigationController extends Controller
 
         DB::transaction(function() use($data,$files,$request,$case,&$investigation){
             $investigation=Investigation::create($data);
-            $case->update(['status'=>'under_investigation']);
+            DiseaseCaseWorkflow::transition($case,'under_investigation',$request->user()->id,'Investigation '.$investigation->investigation_code.' initiated.');
             foreach($files as $file){$path=$file->store('surveillance/investigations/'.$investigation->id,'local');$investigation->attachments()->create(['uploaded_by'=>$request->user()->id,'original_name'=>$file->getClientOriginalName(),'file_path'=>$path,'mime_type'=>$file->getMimeType() ?: 'application/octet-stream','file_size'=>$file->getSize(),'uploaded_at'=>now()]);}
             InvestigationHistory::create(['investigation_id'=>$investigation->id,'event_type'=>'created','new_values'=>$data,'notes'=>'Investigation initiated and assigned.','changed_by'=>$request->user()->id,'changed_at'=>now()]);
             AuditLog::create(['user_id'=>$request->user()->id,'action'=>'investigation.created','entity_type'=>'investigation','entity_id'=>(string)$investigation->id,'ip_address'=>$request->ip(),'description'=>'Started investigation '.$investigation->investigation_code,'created_at'=>now()]);
