@@ -85,11 +85,19 @@ class RoleAccessTest extends TestCase
             'is_active' => true,
         ]);
 
-        foreach ([[$ownFarm, 'CASE-OWN-0001'], [$otherFarm, 'CASE-OTHER-01']] as [$farm, $caseCode]) {
+        $otherReporter = User::create([
+            'name' => 'Other Field Officer',
+            'email' => 'other.field.officer@example.test',
+            'password' => 'Correct-Horse-Battery-42!',
+            'role' => 'field_officer',
+            'is_active' => true,
+        ]);
+
+        foreach ([[$ownFarm, 'CASE-OWN-0001', $farmerUser->id], [$otherFarm, 'CASE-OTHER-01', $otherReporter->id]] as [$farm, $caseCode, $reporterId]) {
             DiseaseCase::create([
                 'case_code' => $caseCode,
                 'farm_id' => $farm->id,
-                'reported_by' => $farmerUser->id,
+                'reported_by' => $reporterId,
                 'disease_suspected' => 'Newcastle disease',
                 'date_observed' => now()->toDateString(),
                 'symptoms' => 'Reduced feed intake and respiratory signs',
