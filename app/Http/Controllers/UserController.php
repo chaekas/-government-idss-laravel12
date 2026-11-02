@@ -30,7 +30,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email', 'max:180', 'unique:users,email'],
-            'role' => ['required', Rule::in($allowedRoles)],
+            'role' => ['required', Rule::in(array_keys(config('idss.roles')))],
             'farmer_id' => ['exclude_unless:role,farmer', 'required', 'integer', 'exists:farmers,id', 'unique:users,farmer_id'],
             'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
@@ -57,12 +57,12 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $adminRoleAliases = ['system_admin', ...config('idss.administrator_aliases', [])];
-        $allowedRoles = array_unique([...array_keys(config('idss.roles')), ...([in_array($user->role, $adminRoleAliases, true) ? $user->role : null])]);
+        $allowedRoles = array_values(array_unique([...array_keys(config('idss.roles')), ...(in_array($user->role, $adminRoleAliases, true) ? [$user->role] : [])]));
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email', 'max:180', 'unique:users,email,'.$user->id],
-            'role' => ['required', 'in:farmer,field_officer,laboratory_technician,laboratory_manager,regional_veterinary_officer,zonal_laboratory_administrator,mlf_officer,system_admin'],
+            'role' => ['required', Rule::in($allowedRoles)],
             'farmer_id' => ['exclude_unless:role,farmer', 'required', 'integer', 'exists:farmers,id', 'unique:users,farmer_id,'.$user->id],
             'is_active' => ['required', 'boolean'],
             'password' => ['nullable', 'confirmed', Password::min(12)->letters()->numbers()],
