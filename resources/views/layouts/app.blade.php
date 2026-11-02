@@ -55,11 +55,13 @@
             @if($isAdmin || in_array($role, $leadershipRoles, true))
                 <a class="{{ request()->routeIs('reports.*')?'active':'' }}" href="{{ route('reports.index') }}">▤ Reports & exports</a>
                 <a class="{{ request()->routeIs('gis.*')?'active':'' }}" href="{{ route('gis.index') }}">⌖ GIS map</a>
+                <a class="{{ request()->routeIs('surveillance.*')?'active':'' }}" href="{{ route('surveillance.index') }}">▥ Surveillance analytics</a>
             @endif
 
             @if($isAdmin)
                 <a class="{{ request()->routeIs('users.*')?'active':'' }}" href="{{ route('users.index') }}">♙ Users management</a>
                 <a class="{{ request()->routeIs('master-data.*')?'active':'' }}" href="{{ route('master-data.index', 'farm-types') }}">▧ Master data</a>
+                <a class="{{ request()->route('type') === 'surveillance-alert-rules' ? 'active' : '' }}" href="{{ route('master-data.index', 'surveillance-alert-rules') }}">⚑ Alert thresholds</a>
                 <a class="{{ request()->routeIs('audit.*')?'active':'' }}" href="{{ route('audit.index') }}">▤ Audit trail</a>
             @endif
         </nav>

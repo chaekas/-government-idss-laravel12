@@ -9,6 +9,7 @@ use App\Models\Sample;
 use App\Models\SampleMovement;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Services\DiseaseCaseWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -171,8 +172,11 @@ class LaboratoryResultController extends Controller
                 });
                 $caseStatus = $classifications->contains('positive')
                     ? 'confirmed'
-                    : ($classifications->every(fn ($value) => $value === 'negative') ? 'not_confirmed' : 'laboratory_result_approved');
-                $sample->diseaseCase()->update(['status' => $caseStatus]);
+                    : ($classifications->every(fn ($value) => $value === 'negative') ? 'rejected' : 'laboratory_testing');
+                $case = $sample->diseaseCase;
+                if ($case) {
+                    DiseaseCaseWorkflow::transition($case, $caseStatus, $request->user()->id, 'Final approved laboratory results: '.$summaries);
+                }
 
                 SampleMovement::create([
                     'sample_id' => $sample->id,

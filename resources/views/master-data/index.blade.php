@@ -12,7 +12,7 @@
     {{ $records->links() }}
 </div>
 <div class="panel"><h3>Reference data catalogues</h3><div class="catalog-links">
-@foreach(['farm-types'=>'Farm types','species'=>'Species','breeds'=>'Breeds','disease-categories'=>'Disease categories','disease-symptoms'=>'Disease symptoms','sample-types'=>'Sample types','laboratory-tests'=>'Laboratory tests','test-methods'=>'Test methods','administrative-areas'=>'Administrative areas'] as $key=>$label)
+@foreach(['farm-types'=>'Farm types','species'=>'Species','breeds'=>'Breeds','disease-categories'=>'Disease categories','disease-symptoms'=>'Disease symptoms','sample-types'=>'Sample types','laboratory-tests'=>'Laboratory tests','test-methods'=>'Test methods','administrative-areas'=>'Administrative areas','surveillance-alert-rules'=>'Surveillance alert rules'] as $key=>$label)
 <a href="{{ route('master-data.index',$key) }}" class="{{ $type === $key ? 'selected' : '' }}">{{ $label }}</a>
 @endforeach
 </div></div>

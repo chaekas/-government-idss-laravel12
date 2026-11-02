@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             FarmTypeSeeder::class,
+            SurveillanceAlertRuleSeeder::class,
         ]);
     }
 }

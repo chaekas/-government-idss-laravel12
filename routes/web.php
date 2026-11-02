@@ -16,6 +16,8 @@ use App\Http\Controllers\LaboratoryResultController;
 use App\Http\Controllers\OutbreakController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SampleController;
+use App\Http\Controllers\SurveillanceController;
+use App\Http\Controllers\SurveillanceAttachmentController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +34,8 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+    Route::get('/surveillance/case-attachments/{attachment}', [SurveillanceAttachmentController::class, 'caseFile'])->name('surveillance.case-attachments.show');
+    Route::get('/surveillance/investigation-attachments/{attachment}', [SurveillanceAttachmentController::class, 'investigationFile'])->name('surveillance.investigation-attachments.show');
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     // Each account can only read and update its own notification inbox.
@@ -44,7 +48,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/cases', [DiseaseCaseController::class, 'index'])->name('cases.index');
         Route::get('/cases/create', [DiseaseCaseController::class, 'create'])->name('cases.create');
         Route::post('/cases', [DiseaseCaseController::class, 'store'])->name('cases.store');
+        Route::get('/cases/{case}/edit', [DiseaseCaseController::class, 'edit'])->name('cases.edit');
+        Route::put('/cases/{case}', [DiseaseCaseController::class, 'update'])->name('cases.update');
     });
+
+    Route::middleware('role:regional_veterinary_officer,mlf_officer,system_admin,super_admin,super-admin,administrator,admin')->post('/cases/{case}/close', [DiseaseCaseController::class, 'close'])->name('cases.close');
 
     // Field registration and case investigation.
     Route::middleware('role:field_officer,regional_veterinary_officer,system_admin,administrator,admin')->group(function () {
@@ -52,10 +60,18 @@ Route::middleware('auth')->group(function () {
         Route::resource('farms', FarmController::class)->only(['index', 'create', 'store']);
         Route::resource('animals', AnimalController::class)->only(['index', 'create', 'store']);
 
-        Route::get('/investigations', [InvestigationController::class, 'index'])->name('investigations.index');
         Route::get('/investigations/create', [InvestigationController::class, 'create'])->name('investigations.create');
         Route::post('/investigations', [InvestigationController::class, 'store'])->name('investigations.store');
         Route::put('/investigations/{investigation}', [InvestigationController::class, 'update'])->name('investigations.update');
+    });
+
+    Route::middleware('role:field_officer,regional_veterinary_officer,mlf_officer,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
+        Route::get('/investigations', [InvestigationController::class, 'index'])->name('investigations.index');
+        Route::get('/investigations/{investigation}/report', [InvestigationController::class, 'report'])->name('investigations.report');
+    });
+
+    Route::middleware('role:regional_veterinary_officer,mlf_officer,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
+        Route::post('/investigations/{investigation}/approve', [InvestigationController::class, 'approve'])->name('investigations.approve');
     });
 
     // Ministry and regional leadership can view outbreak records; field officers
@@ -64,6 +80,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/outbreaks', [OutbreakController::class, 'index'])->name('outbreaks.index');
         Route::get('/outbreaks/create', [OutbreakController::class, 'create'])->name('outbreaks.create');
         Route::post('/outbreaks', [OutbreakController::class, 'store'])->name('outbreaks.store');
+        Route::put('/outbreaks/{outbreak}', [OutbreakController::class, 'update'])->name('outbreaks.update');
     });
 
     // Sample visibility is shared by field, laboratory and surveillance roles.
@@ -112,6 +129,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/cases.csv', [ReportsController::class, 'cases'])->name('reports.cases');
         Route::get('/reports/samples.csv', [ReportsController::class, 'samples'])->name('reports.samples');
         Route::get('/gis', [GISController::class, 'index'])->name('gis.index');
+        Route::get('/surveillance', [SurveillanceController::class, 'index'])->name('surveillance.index');
     });
 
     // Accept the legacy administrator role labels used by existing seeded accounts.
