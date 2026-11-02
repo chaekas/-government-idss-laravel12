@@ -196,4 +196,179 @@ class SurveillanceWorkflowTest extends TestCase
     }
 
 
+    private function makeSampleWorkflowFixture(): array
+    {
+        $officer = $this->makeUser('field_officer');
+        $technician = $this->makeUser('laboratory_technician');
+        $manager = $this->makeUser('laboratory_manager');
+
+        $farmer = Farmer::create([
+            'farmer_code' => 'FRM-'.Str::upper(Str::random(8)),
+            'full_name' => 'Workflow Guard Test Farmer',
+            'region' => 'Dodoma',
+            'district' => 'Kondoa',
+        ]);
+        $farm = Farm::create([
+            'farm_code' => 'FARM-'.Str::upper(Str::random(8)),
+            'farmer_id' => $farmer->id,
+            'name' => 'Workflow Guard Test Farm',
+            'region' => 'Dodoma',
+            'district' => 'Kondoa',
+            'bird_count' => 20,
+        ]);
+        $case = DiseaseCase::create([
+            'case_code' => 'CASE-'.Str::upper(Str::random(8)),
+            'farm_id' => $farm->id,
+            'reported_by' => $officer->id,
+            'disease_suspected' => 'Newcastle disease',
+            'date_observed' => now()->toDateString(),
+            'symptoms' => 'Respiratory signs',
+            'birds_affected' => 3,
+            'birds_dead' => 1,
+            'severity' => 'high',
+            'status' => 'under_investigation',
+        ]);
+        Investigation::create([
+            'investigation_code' => 'INV-'.Str::upper(Str::random(8)),
+            'disease_case_id' => $case->id,
+            'started_by' => $officer->id,
+            'assigned_to' => $officer->id,
+            'investigated_at' => now(),
+            'status' => 'under_investigation',
+            'field_observations' => 'Sample collection required.',
+        ]);
+        $laboratory = Laboratory::create([
+            'code' => 'LAB-'.Str::upper(Str::random(8)),
+            'name' => 'Workflow Guard Laboratory',
+            'level' => 'regional',
+            'region' => 'Dodoma',
+            'district' => 'Dodoma',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($officer)->post(route('samples.store'), [
+            'disease_case_id' => $case->id,
+            'laboratory_id' => $laboratory->id,
+            'collection_date' => now()->toDateString(),
+            'sample_type' => 'Swab',
+            'collection_notes' => 'Workflow guard test sample.',
+        ])->assertRedirect(route('samples.index'));
+
+        return [
+            'officer' => $officer,
+            'technician' => $technician,
+            'manager' => $manager,
+            'case' => $case,
+            'laboratory' => $laboratory,
+            'sample' => Sample::where('disease_case_id', $case->id)->firstOrFail(),
+        ];
+    }
+
+    public function test_sample_cannot_be_dispatched_before_packaging_and_rejected_sample_cannot_enter_testing(): void
+    {
+        $flow = $this->makeSampleWorkflowFixture();
+        $sample = $flow['sample'];
+        $officer = $flow['officer'];
+        $technician = $flow['technician'];
+        $laboratory = $flow['laboratory'];
+
+        $this->actingAs($officer)->put(route('samples.update', $sample), [
+            'event_type' => 'dispatched',
+            'condition_on_transfer' => 'Sealed transport container',
+        ])->assertSessionHasErrors('event_type');
+        $this->assertSame('not_dispatched', $sample->fresh()->transport_status);
+
+        $this->actingAs($officer)->put(route('samples.update', $sample), [
+            'event_type' => 'packaged',
+            'condition_on_transfer' => 'Sealed, leak-proof container',
+        ])->assertRedirect(route('samples.index'));
+
+        $this->actingAs($officer)->put(route('samples.update', $sample), [
+            'event_type' => 'dispatched',
+            'condition_on_transfer' => 'Chilled transport container',
+        ])->assertRedirect(route('samples.index'));
+
+        $this->actingAs($technician)->put(route('samples.update', $sample), [
+            'event_type' => 'received',
+            'received_by' => $technician->name,
+            'condition_on_transfer' => 'Seal intact',
+        ])->assertRedirect(route('samples.index'));
+
+        $this->actingAs($technician)->put(route('samples.update', $sample), [
+            'event_type' => 'rejected',
+            'rejection_reason' => 'Container seal was compromised.',
+        ])->assertRedirect(route('samples.index'));
+
+        $sample->refresh();
+        $this->assertSame('rejected', $sample->quality_status);
+        $this->assertSame('Container seal was compromised.', $sample->rejection_reason);
+        $this->assertSame('pending', $sample->test_status);
+
+        $this->actingAs($flow['manager'])->put(route('samples.assign', $sample), [
+            'laboratory_section' => 'Virology',
+            'assigned_technician' => $technician->id,
+        ])->assertSessionHasErrors('assigned_technician');
+
+        $this->actingAs($technician)->get(route('laboratory.create'))
+            ->assertDontSee($sample->sample_code);
+        $this->assertDatabaseHas('sample_movements', [
+            'sample_id' => $sample->id,
+            'event_type' => 'rejected',
+        ]);
+    }
+
+    public function test_test_performer_cannot_approve_own_submitted_result_even_if_their_role_later_changes(): void
+    {
+        $flow = $this->makeSampleWorkflowFixture();
+        $sample = $flow['sample'];
+        $officer = $flow['officer'];
+        $technician = $flow['technician'];
+        $manager = $flow['manager'];
+        $laboratory = $flow['laboratory'];
+
+        $this->actingAs($officer)->put(route('samples.update', $sample), [
+            'event_type' => 'packaged',
+            'condition_on_transfer' => 'Sealed container',
+        ])->assertRedirect(route('samples.index'));
+        $this->actingAs($officer)->put(route('samples.update', $sample), [
+            'event_type' => 'dispatched',
+            'condition_on_transfer' => 'Chilled transport',
+        ])->assertRedirect(route('samples.index'));
+        $this->actingAs($technician)->put(route('samples.update', $sample), [
+            'event_type' => 'received',
+            'received_by' => $technician->name,
+            'condition_on_transfer' => 'Seal intact',
+        ])->assertRedirect(route('samples.index'));
+        $this->actingAs($technician)->put(route('samples.update', $sample), [
+            'event_type' => 'accepted',
+            'notes' => 'Passed reception quality check.',
+        ])->assertRedirect(route('samples.index'));
+        $this->actingAs($manager)->put(route('samples.assign', $sample), [
+            'laboratory_section' => 'Virology',
+            'assigned_technician' => $technician->id,
+        ])->assertRedirect(route('samples.index'));
+        $this->actingAs($technician)->put(route('samples.update', $sample), [
+            'event_type' => 'testing_started',
+        ])->assertRedirect(route('samples.index'));
+        $this->actingAs($technician)->post(route('laboratory.store'), [
+            'sample_id' => $sample->id,
+            'laboratory_id' => $laboratory->id,
+            'test_name' => 'Newcastle disease PCR',
+            'method' => 'PCR',
+            'qualitative_result' => 'Positive',
+        ])->assertRedirect(route('laboratory.index'));
+
+        $result = LaboratoryTestResult::where('sample_id', $sample->id)->firstOrFail();
+        $technician->update(['role' => 'laboratory_manager']);
+
+        $this->actingAs($technician)->put(route('laboratory.approve', $result), [
+            'decision' => 'approve',
+            'review_comments' => 'Attempted self-approval.',
+        ])->assertSessionHasErrors('decision');
+
+        $this->assertSame('submitted_for_review', $result->fresh()->status);
+        $this->assertNull($result->fresh()->reviewed_by);
+        $this->assertSame('completed', $sample->fresh()->test_status);
+    }
+
 }
