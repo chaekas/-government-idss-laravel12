@@ -21,7 +21,7 @@ class SampleController extends Controller
 
     public function create()
     {
-        return view('samples.create', ['cases' => DiseaseCase::with('farm')->whereNotIn('status', ['closed'])->latest()->get(), 'laboratories' => Laboratory::where('is_active', true)->orderBy('name')->get()]);
+        return view('samples.create', ['cases' => DiseaseCase::with('farm')->whereNotIn('status', ['closed'])->whereHas('investigation')->latest()->get(), 'laboratories' => Laboratory::where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function store(Request $request)
@@ -33,6 +33,13 @@ class SampleController extends Controller
             'sample_type' => ['required', 'string', 'max:120'],
             'collection_notes' => ['nullable', 'string', 'max:3000'],
         ]);
+        $case = DiseaseCase::with('investigation')->findOrFail($data['disease_case_id']);
+        if (!$case->investigation) {
+            throw ValidationException::withMessages([
+                'disease_case_id' => 'A disease investigation must be recorded before a sample can be registered.',
+            ]);
+        }
+
         $code = 'SMP-'.now()->format('ymd').'-'.Str::upper(Str::random(6));
         $data['sample_code'] = $code;
         $data['barcode_value'] = $code;
@@ -57,6 +64,18 @@ class SampleController extends Controller
             'notes' => ['nullable', 'string', 'max:3000'],
             'rejection_reason' => ['nullable', 'required_if:event_type,rejected', 'string', 'max:1000'],
         ]);
+        $qualityEvents = ['accepted', 'rejected', 'damaged', 'contaminated', 'insufficient_volume', 'recollection_required'];
+        if (in_array($data['event_type'], $qualityEvents, true) && $sample->transport_status !== 'received') {
+            throw ValidationException::withMessages([
+                'event_type' => 'Record sample receipt at the laboratory before recording a quality decision.',
+            ]);
+        }
+        if ($data['event_type'] === 'dispatched' && in_array($sample->transport_status, ['in_transit', 'received'], true)) {
+            throw ValidationException::withMessages([
+                'event_type' => 'This sample has already been dispatched or received; record the next custody event instead.',
+            ]);
+        }
+
         $sample->update([
             'transport_status' => $data['event_type'] === 'dispatched' ? 'in_transit' : (in_array($data['event_type'], ['received','accepted','rejected','damaged','contaminated','insufficient_volume','recollection_required'], true) ? 'received' : $sample->transport_status),
             'quality_status' => in_array($data['event_type'], ['accepted','rejected','damaged','contaminated','insufficient_volume','recollection_required'], true) ? $data['event_type'] : $sample->quality_status,
