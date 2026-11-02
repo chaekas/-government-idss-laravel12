@@ -91,7 +91,7 @@ class SampleController extends Controller
         $data['test_status'] = 'pending';
         $sample = Sample::create($data);
 
-        $this->recordMovement($sample, $request, 'collected', 'Field collection', $laboratory->name, $data['collection_notes'] ?? null);
+        $this->recordMovement($sample, $request, 'collected', 'Field collection', 'Field collection', trim('Destination laboratory: '.$laboratory->name.'. '.($data['collection_notes'] ?? '')));
         $case->update(['status' => 'sample_collected']);
 
         $this->audit($request, 'sample.collected', $sample, 'Registered sample '.$code.' for '.$laboratory->name);
