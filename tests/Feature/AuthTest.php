@@ -10,9 +10,72 @@ class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_page_is_available_to_guests(): void
+    public function test_login_page_is_available_to_guests_and_links_to_registration(): void
     {
-        $this->get(route('login'))->assertOk();
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee(route('register'));
+    }
+
+    public function test_registration_page_is_available_to_guests(): void
+    {
+        $this->get(route('register'))
+            ->assertOk()
+            ->assertSee('Create farmer account')
+            ->assertSee('Confirm password');
+    }
+
+    public function test_public_registration_creates_a_linked_farmer_account_and_signs_user_in(): void
+    {
+        $response = $this->post(route('register.store'), [
+            'name' => 'New Farmer',
+            'email' => 'new.farmer@example.test',
+            'phone' => '+255700000001',
+            'region' => 'Morogoro',
+            'district' => 'Kilosa',
+            'password' => 'Secure-Farmer-2026!',
+            'password_confirmation' => 'Secure-Farmer-2026!',
+            // Public registration must ignore any attempted privilege escalation.
+            'role' => 'system_admin',
+        ]);
+
+        $response->assertRedirect(route('dashboard'));
+        $this->assertAuthenticated();
+
+        $user = User::where('email', 'new.farmer@example.test')->firstOrFail();
+        $this->assertSame('farmer', $user->role);
+        $this->assertTrue($user->is_active);
+        $this->assertNotNull($user->farmer_id);
+
+        $this->assertDatabaseHas('farmers', [
+            'id' => $user->farmer_id,
+            'full_name' => 'New Farmer',
+            'email' => 'new.farmer@example.test',
+            'region' => 'Morogoro',
+            'district' => 'Kilosa',
+        ]);
+    }
+
+    public function test_registration_rejects_duplicate_email_addresses(): void
+    {
+        User::create([
+            'name' => 'Existing Farmer',
+            'email' => 'existing@example.test',
+            'password' => 'Correct-Horse-Battery-42!',
+            'role' => 'farmer',
+            'is_active' => true,
+        ]);
+
+        $this->from(route('register'))->post(route('register.store'), [
+            'name' => 'Duplicate Farmer',
+            'email' => 'existing@example.test',
+            'region' => 'Morogoro',
+            'district' => 'Kilosa',
+            'password' => 'Secure-Farmer-2026!',
+            'password_confirmation' => 'Secure-Farmer-2026!',
+        ])->assertRedirect(route('register'))->assertSessionHasErrors('email');
+
+        $this->assertDatabaseCount('farmers', 0);
     }
 
     public function test_guest_is_redirected_to_login_from_dashboard(): void
