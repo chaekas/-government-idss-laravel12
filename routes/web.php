@@ -44,6 +44,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/cases', [DiseaseCaseController::class, 'index'])->name('cases.index');
         Route::get('/cases/create', [DiseaseCaseController::class, 'create'])->name('cases.create');
         Route::post('/cases', [DiseaseCaseController::class, 'store'])->name('cases.store');
+        Route::get('/cases/{case}/edit', [DiseaseCaseController::class, 'edit'])->name('cases.edit');
+        Route::put('/cases/{case}', [DiseaseCaseController::class, 'update'])->name('cases.update');
     });
 
     // Field registration and case investigation.
@@ -56,6 +58,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/investigations/create', [InvestigationController::class, 'create'])->name('investigations.create');
         Route::post('/investigations', [InvestigationController::class, 'store'])->name('investigations.store');
         Route::put('/investigations/{investigation}', [InvestigationController::class, 'update'])->name('investigations.update');
+    });
+
+    Route::middleware('role:regional_veterinary_officer,mlf_officer,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
+        Route::post('/investigations/{investigation}/approve', [InvestigationController::class, 'approve'])->name('investigations.approve');
     });
 
     // Ministry and regional leadership can view outbreak records; field officers
