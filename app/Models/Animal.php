@@ -11,7 +11,7 @@ class Animal extends Model
     protected $fillable = [
         'animal_code', 'farm_id', 'farmer_id', 'species_id', 'breed_id', 'species', 'breed',
         'sex', 'date_of_birth', 'identification_method',
-        'external_identifier', 'ownership_status', 'notes', 'archived_at',
+        'external_identifier', 'ownership_status', 'notes', 'archived_at', 'created_by', 'modified_by', 'record_status',
     ];
 
     protected function casts(): array
