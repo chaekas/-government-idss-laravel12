@@ -30,7 +30,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email', 'max:180', 'unique:users,email'],
-            'role' => ['required', Rule::in(array_keys(config('idss.roles')))],
+            'role' => ['required', Rule::in($allowedRoles)],
             'farmer_id' => ['exclude_unless:role,farmer', 'required', 'integer', 'exists:farmers,id', 'unique:users,farmer_id'],
             'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
@@ -56,6 +56,9 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $adminRoleAliases = ['system_admin', ...config('idss.administrator_aliases', [])];
+        $allowedRoles = array_unique([...array_keys(config('idss.roles')), ...([in_array($user->role, $adminRoleAliases, true) ? $user->role : null])]);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email', 'max:180', 'unique:users,email,'.$user->id],
@@ -65,17 +68,16 @@ class UserController extends Controller
             'password' => ['nullable', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
 
-        $adminRoleAliases = ['system_admin', 'super_admin', 'super-admin', 'administrator', 'admin'];
         $isAdministratorAccount = in_array($user->role, $adminRoleAliases, true);
 
         // Do not allow a signed-in administrator to remove their own admin access.
-        if ($user->is($request->user()) && ($data['role'] !== 'system_admin' || !$request->boolean('is_active'))) {
+        if ($user->is($request->user()) && (!in_array($data['role'], $adminRoleAliases, true) || !$request->boolean('is_active'))) {
             return back()->withErrors(['role' => 'You cannot demote or deactivate your own administrator account.']);
         }
 
         // Never allow the last active administrator account to be demoted or disabled.
         $removingAdminAccess = $isAdministratorAccount
-            && ($data['role'] !== 'system_admin' || !$request->boolean('is_active'));
+            && (!in_array($data['role'], $adminRoleAliases, true) || !$request->boolean('is_active'));
         if ($removingAdminAccess) {
             $otherActiveAdmins = User::whereIn('role', $adminRoleAliases)
                 ->where('is_active', true)
