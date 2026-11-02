@@ -61,7 +61,16 @@ class DiseaseCaseController extends Controller
         $data['reported_by'] = $request->user()->id;
         $data['status'] = 'reported';
 
-        DiseaseCase::create($data);
+        $case = DiseaseCase::create($data);
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'disease_case.created',
+            'entity_type' => 'disease_case',
+            'entity_id' => (string) $case->id,
+            'ip_address' => $request->ip(),
+            'description' => 'Reported disease case '.$case->case_code,
+            'created_at' => now(),
+        ]);
 
         return redirect()->route('cases.index')->with('status', 'Disease case reported successfully.');
     }
