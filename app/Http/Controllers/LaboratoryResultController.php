@@ -48,7 +48,7 @@ class LaboratoryResultController extends Controller
         $data['status'] = 'submitted_for_review';
         $data['tested_at'] = now();
         $result = LaboratoryTestResult::create($data);
-        Sample::whereKey($data['sample_id'])->update(['test_status' => 'completed']);
+        Sample::whereKey($data['sample_id'])->update(['test_status' => 'completed']);\n        $sample->diseaseCase()->update(['status' => 'laboratory_testing']);
         AuditLog::create(['user_id' => $request->user()->id, 'action' => 'laboratory.result_submitted', 'entity_type' => 'laboratory_test_result', 'entity_id' => (string) $result->id, 'ip_address' => $request->ip(), 'description' => 'Submitted result '.$result->result_code, 'created_at' => now()]);
         return redirect()->route('laboratory.index')->with('status', 'Laboratory result submitted for review.');
     }
