@@ -63,6 +63,13 @@ Route::middleware('auth')->group(function () {
         Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
     });
 
+    Route::middleware('role:regional_veterinary_officer,mlf_officer,system_admin,administrator,admin')->group(function () {
+        Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
+        Route::get('/reports/cases.csv', [ReportsController::class, 'cases'])->name('reports.cases');
+        Route::get('/reports/samples.csv', [ReportsController::class, 'samples'])->name('reports.samples');
+        Route::get('/gis', [GISController::class, 'index'])->name('gis.index');
+    });
+
     Route::middleware('role:system_admin,administrator,admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
