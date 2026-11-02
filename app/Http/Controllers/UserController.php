@@ -64,22 +64,25 @@ class UserController extends Controller
             'password' => ['nullable', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
 
-        // Do not allow the signed-in administrator to remove their own admin access.
+        $adminRoleAliases = ['system_admin', 'super_admin', 'super-admin', 'administrator', 'admin'];
+        $isAdministratorAccount = in_array($user->role, $adminRoleAliases, true);
+
+        // Do not allow a signed-in administrator to remove their own admin access.
         if ($user->is($request->user()) && ($data['role'] !== 'system_admin' || !$request->boolean('is_active'))) {
-            return back()->withErrors(['role' => 'You cannot demote or deactivate your own system administrator account.']);
+            return back()->withErrors(['role' => 'You cannot demote or deactivate your own administrator account.']);
         }
 
-        // Never allow the last active system administrator to be demoted or disabled.
-        $removingAdminAccess = $user->role === 'system_admin'
+        // Never allow the last active administrator account to be demoted or disabled.
+        $removingAdminAccess = $isAdministratorAccount
             && ($data['role'] !== 'system_admin' || !$request->boolean('is_active'));
         if ($removingAdminAccess) {
-            $otherActiveAdmins = User::where('role', 'system_admin')
+            $otherActiveAdmins = User::whereIn('role', $adminRoleAliases)
                 ->where('is_active', true)
                 ->where('id', '<>', $user->id)
                 ->count();
 
             if ($otherActiveAdmins < 1) {
-                return back()->withErrors(['role' => 'At least one active system administrator must remain.']);
+                return back()->withErrors(['role' => 'At least one active administrator must remain.']);
             }
         }
 
