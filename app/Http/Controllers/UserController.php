@@ -12,12 +12,12 @@ class UserController extends Controller
 {
     public function index()
     {
-        return view('users.index', ['users' => User::orderBy('name')->paginate(20)]);
+        return view('users.index', ['users' => User::with('farmer')->orderBy('name')->paginate(20), 'farmers' => Farmer::orderBy('full_name')->get()]);
     }
 
     public function create()
     {
-        return view('users.create');
+        return view('users.create', ['farmers' => Farmer::orderBy('full_name')->get()]);
     }
 
     public function store(Request $request)
@@ -26,9 +26,10 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email', 'max:180', 'unique:users,email'],
             'role' => ['required', 'in:farmer,field_officer,laboratory_technician,laboratory_manager,regional_veterinary_officer,zonal_laboratory_administrator,mlf_officer,system_admin'],
+            'farmer_id' => ['nullable', 'required_if:role,farmer', 'exists:farmers,id', 'unique:users,farmer_id'],
             'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
-        $data['is_active'] = true;
+        if (($data['role'] ?? null) !== 'farmer') { $data['farmer_id'] = null; }\n        $data['is_active'] = true;
         $user = User::create($data);
         AuditLog::create(['user_id' => $request->user()->id, 'action' => 'user.created', 'entity_type' => 'user', 'entity_id' => (string) $user->id, 'ip_address' => $request->ip(), 'description' => 'Created user '.$user->email.' with role '.$user->role, 'created_at' => now()]);
         return redirect()->route('users.index')->with('status', 'User created successfully.');
@@ -40,10 +41,11 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email', 'max:180', 'unique:users,email,'.$user->id],
             'role' => ['required', 'in:farmer,field_officer,laboratory_technician,laboratory_manager,regional_veterinary_officer,zonal_laboratory_administrator,mlf_officer,system_admin'],
+            'farmer_id' => ['nullable', 'required_if:role,farmer', 'exists:farmers,id', 'unique:users,farmer_id,'.$user->id],
             'is_active' => ['required', 'boolean'],
             'password' => ['nullable', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
-        if (empty($data['password'])) {
+        if (($data['role'] ?? null) !== 'farmer') { $data['farmer_id'] = null; }\n        if (empty($data['password'])) {
             unset($data['password']);
         } else {
             $data['password'] = Hash::make($data['password']);
