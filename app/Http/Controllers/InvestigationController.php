@@ -21,7 +21,7 @@ class InvestigationController extends Controller
     {
         return view('investigations.create', [
             'cases' => DiseaseCase::with('farm')->whereDoesntHave('investigation')->latest()->get(),
-            'officers' => User::where('is_active', true)->whereIn('role', ['field_officer', 'administrator', 'admin', 'system_admin'])->orderBy('name')->get(),
+            'officers' => User::where('is_active', true)->whereIn('role', ['field_officer', 'regional_veterinary_officer', 'administrator', 'admin', 'system_admin'])->orderBy('name')->get(),
         ]);
     }
 
