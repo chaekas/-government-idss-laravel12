@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdministrativeArea;
+use App\Models\AuditLog;
 use App\Models\Breed;
 use App\Models\DiseaseCategory;
 use App\Models\DiseaseSymptom;
@@ -12,7 +13,6 @@ use App\Models\SampleType;
 use App\Models\Species;
 use App\Models\TestMethod;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class MasterDataController extends Controller
@@ -72,7 +72,8 @@ class MasterDataController extends Controller
     public function edit(string $type, int $record)
     {
         $definition = $this->definition($type);
-        $item = $definition['model']::findOrFail($record);
+        $modelClass = $definition['model'];
+        $item = $modelClass::findOrFail($record);
         $options = $this->formOptions();
         return view('master-data.form', compact('type', 'definition', 'item', 'options'));
     }
