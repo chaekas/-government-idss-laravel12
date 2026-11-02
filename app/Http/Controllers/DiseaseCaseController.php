@@ -49,7 +49,7 @@ class DiseaseCaseController extends Controller
         $farms = Farm::with('farmer')->where('status','active');
         if ($request->user()->role === 'farmer') {
             abort_unless($request->user()->farmer_id,403,'Your account is not linked to a farmer record.');
-            $farms->whereHas('farmers',fn($owners)=>$owners->where('farmers.id',$request->user()->farmer_id)->wherePivotNull('effective_to'));
+            $farms->whereHas('farmers',fn($owners)=>$owners->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to'));
         }
         return view('cases.create',[
             'farms'=>$farms->orderBy('name')->get(),
@@ -66,7 +66,11 @@ class DiseaseCaseController extends Controller
         if ($request->user()->role === 'farmer') {
             abort_unless($request->user()->farmer_id,403,'Your account is not linked to a farmer record.');
             $farmerId=$request->user()->farmer_id;
-            $farmRule=Rule::exists('farms','id')->where(fn($q)=>$q->where('status','active')->where('farmer_id',$farmerId));
+            $farmRule=Rule::exists('farms','id')->where(fn($q)=>$q->where('status','active'));
+            $requestedFarmId=$request->input('farm_id');
+            if($requestedFarmId && !Farm::whereKey($requestedFarmId)->whereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to'))->exists()) {
+                throw ValidationException::withMessages(['farm_id'=>'You may report disease only for a farm currently linked to your farmer account.']);
+            }
         }
 
         $data=$request->validate([
@@ -171,7 +175,7 @@ class DiseaseCaseController extends Controller
 
     private function authorizeCase(Request $request,DiseaseCase $case): void
     {
-        if($request->user()->role==='farmer') abort_unless($case->farm?->farmer_id===$request->user()->farmer_id,403);
+        if($request->user()->role==='farmer') abort_unless($case->farm?->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists(),403);
         else abort_unless(in_array($request->user()->role,self::STAFF_ROLES,true),403);
     }
 
