@@ -51,7 +51,7 @@ class SampleController extends Controller
         return view('samples.create', [
             'cases' => DiseaseCase::with('farm')
                 ->whereNotIn('status', ['closed'])
-                ->whereHas('investigation')
+                ->whereHas('investigation', fn ($investigations) => $investigations->where('status', '!=', 'closed'))
                 ->latest()
                 ->get(),
             'laboratories' => Laboratory::where('is_active', true)->orderBy('name')->get(),
@@ -69,7 +69,7 @@ class SampleController extends Controller
         ]);
 
         $case = DiseaseCase::with('investigation')->findOrFail($data['disease_case_id']);
-        if (!$case->investigation || $case->status === 'closed') {
+        if (!$case->investigation || $case->investigation->status === 'closed' || $case->status === 'closed') {
             throw ValidationException::withMessages([
                 'disease_case_id' => 'An active disease investigation is required before a sample can be registered.',
             ]);
