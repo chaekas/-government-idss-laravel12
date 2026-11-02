@@ -11,4 +11,5 @@ class SampleMovement extends Model
 
     protected function casts(): array { return ['event_at' => 'datetime']; }
     public function sample(): BelongsTo { return $this->belongsTo(Sample::class); }
+    public function recordedBy(): BelongsTo { return $this->belongsTo(User::class, 'recorded_by'); }
 }
