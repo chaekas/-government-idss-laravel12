@@ -36,7 +36,7 @@ class LaboratoryResultController extends Controller
             'samples' => Sample::where('quality_status', 'accepted')
                 ->where('transport_status', 'received')
                 ->where('assigned_technician', $request->user()->id)
-                ->where('test_status', '!=', 'approved')
+                ->whereIn('test_status', ['in_progress', 'completed'])
                 ->with('laboratory')
                 ->orderBy('sample_code')
                 ->get(),
@@ -69,6 +69,9 @@ class LaboratoryResultController extends Controller
         }
         if (!$sample->laboratory_id || (int) $sample->laboratory_id !== (int) $data['laboratory_id']) {
             throw ValidationException::withMessages(['laboratory_id' => 'The selected laboratory must match the sample destination.']);
+        }
+        if (!in_array($sample->test_status, ['in_progress', 'completed'], true) || !$sample->testing_started_at) {
+            throw ValidationException::withMessages(['sample_id' => 'The assigned technician must start the examination before entering test results.']);
         }
         if ($sample->test_status === 'approved') {
             throw ValidationException::withMessages(['sample_id' => 'The sample has already been finally approved and released.']);
