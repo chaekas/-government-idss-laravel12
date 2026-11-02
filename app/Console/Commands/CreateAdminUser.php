@@ -16,7 +16,7 @@ class CreateAdminUser extends Command
     public function handle(): int
     {
         $name = trim((string) $this->ask('Administrator full name'));
-        $email = strtolower(trim((string) $this->ask('Administrator work email'));
+        $email = strtolower(trim((string) $this->ask('Administrator work email')));
         $password = (string) $this->secret('Choose a strong password (minimum 12 characters)');
         $confirmation = (string) $this->secret('Confirm password');
 
