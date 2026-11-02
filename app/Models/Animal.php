@@ -16,7 +16,7 @@ class Animal extends Model
 
     protected function casts(): array
     {
-        return ['date_of_birth' => 'date', 'date_of_death' => 'date', 'archived_at' => 'datetime'];
+        return ['date_of_birth' => 'date', 'archived_at' => 'datetime'];
     }
 
     public function farm(): BelongsTo { return $this->belongsTo(Farm::class); }
