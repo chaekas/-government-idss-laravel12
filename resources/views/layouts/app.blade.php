@@ -9,7 +9,9 @@
 <body>
 @php
     $role = auth()->user()->role;
-    $isAdmin = $role === 'system_admin';
+    // Support canonical and legacy super-admin role values on existing accounts.
+    $adminRoles = ['system_admin', 'super_admin', 'super-admin', 'administrator', 'admin'];
+    $isAdmin = in_array($role, $adminRoles, true);
     $fieldRoles = ['field_officer', 'regional_veterinary_officer'];
     $labRoles = ['laboratory_technician', 'laboratory_manager', 'zonal_laboratory_administrator'];
     $leadershipRoles = ['regional_veterinary_officer', 'mlf_officer'];
