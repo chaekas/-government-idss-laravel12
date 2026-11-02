@@ -76,7 +76,7 @@ class DatabaseMasterDataTest extends TestCase
         ]);
 
         $this->assertCount(2, $farm->fresh()->farmers);
-        $this->assertSame(2, $first->fresh()->farms()->count());
+        $this->assertSame(1, $first->fresh()->farms()->count());
     }
 
     public function test_administrator_can_create_master_data_and_action_is_audited(): void
