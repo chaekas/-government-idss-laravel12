@@ -1,0 +1,12 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Outbreak extends Model
+{
+    protected $fillable = ['outbreak_code', 'disease_name', 'region', 'district', 'latitude', 'longitude', 'start_date', 'cases_count', 'deaths_count', 'severity', 'status', 'response_actions', 'reported_by'];
+
+    protected function casts(): array { return ['start_date' => 'date', 'latitude' => 'decimal:7', 'longitude' => 'decimal:7']; }
+}
