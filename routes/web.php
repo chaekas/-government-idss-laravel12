@@ -10,6 +10,7 @@ use App\Http\Controllers\InvestigationController;
 use App\Http\Controllers\LaboratoryResultController;
 use App\Http\Controllers\OutbreakController;
 use App\Http\Controllers\SampleController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
@@ -35,4 +36,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/laboratory', [LaboratoryResultController::class, 'store'])->name('laboratory.store');
     Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
     Route::resource('outbreaks', OutbreakController::class)->only(['index', 'create', 'store']);
+
+    Route::middleware('role:system_admin,administrator,admin')->group(function () {
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    });
 });
