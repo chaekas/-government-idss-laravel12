@@ -51,6 +51,14 @@ return new class extends Migration
             $table->index(['parent_id', 'area_type']);
         });
 
+        Schema::create('offices', function (Blueprint $table) {
+            $table->id(); $table->foreignId('organization_id')->nullable()->constrained()->restrictOnDelete();
+            $table->foreignId('department_id')->nullable()->constrained()->restrictOnDelete();
+            $table->foreignId('administrative_area_id')->nullable()->constrained('administrative_areas')->nullOnDelete();
+            $table->string('code')->unique(); $table->string('name'); $table->string('office_type', 80)->nullable();
+            $table->boolean('is_active')->default(true); $table->timestamps(); $table->softDeletes();
+        });
+
         // Farmer profile, contact/address records and joint ownership history.
         Schema::table('users', function (Blueprint $table) {
             if (!Schema::hasColumn('users', 'organization_id')) $table->foreignId('organization_id')->nullable()->constrained()->nullOnDelete();
@@ -274,11 +282,3 @@ return new class extends Migration
         // depend on these tables. Rollback is handled by a forward corrective migration.
     }
 };
-
-        Schema::create('offices', function (Blueprint $table) {
-            $table->id(); $table->foreignId('organization_id')->nullable()->constrained()->restrictOnDelete();
-            $table->foreignId('department_id')->nullable()->constrained()->restrictOnDelete();
-            $table->foreignId('administrative_area_id')->nullable()->constrained('administrative_areas')->nullOnDelete();
-            $table->string('code')->unique(); $table->string('name'); $table->string('office_type', 80)->nullable();
-            $table->boolean('is_active')->default(true); $table->timestamps(); $table->softDeletes();
-        });
