@@ -71,7 +71,6 @@ return new class extends Migration
             if (!Schema::hasColumn('farmers', 'sex')) $table->string('sex', 20)->nullable();
             if (!Schema::hasColumn('farmers', 'date_of_birth')) $table->date('date_of_birth')->nullable();
             if (!Schema::hasColumn('farmers', 'nationality')) $table->string('nationality', 100)->nullable();
-            if (!Schema::hasColumn('farmers', 'farmer_type')) $table->string('farmer_type', 40)->default('individual')->index();
             if (!Schema::hasColumn('farmers', 'status')) $table->string('status', 30)->default('active')->index();
             if (!Schema::hasColumn('farmers', 'archived_at')) $table->timestamp('archived_at')->nullable()->index();
         });
@@ -99,8 +98,6 @@ return new class extends Migration
         });
         Schema::table('farms', function (Blueprint $table) {
             if (!Schema::hasColumn('farms', 'farm_type_id')) $table->foreignId('farm_type_id')->nullable()->constrained()->nullOnDelete();
-            if (!Schema::hasColumn('farms', 'farm_size')) $table->decimal('farm_size', 14, 3)->nullable();
-            if (!Schema::hasColumn('farms', 'farm_size_unit')) $table->string('farm_size_unit', 30)->nullable();
             if (!Schema::hasColumn('farms', 'administrative_area_id')) $table->foreignId('administrative_area_id')->nullable()->constrained()->nullOnDelete();
             if (!Schema::hasColumn('farms', 'status')) $table->string('status', 30)->default('active')->index();
             if (!Schema::hasColumn('farms', 'archived_at')) $table->timestamp('archived_at')->nullable()->index();
@@ -136,9 +133,6 @@ return new class extends Migration
             if (!Schema::hasColumn('animals', 'farmer_id')) $table->foreignId('farmer_id')->nullable()->constrained()->nullOnDelete();
             if (!Schema::hasColumn('animals', 'species_id')) $table->foreignId('species_id')->nullable()->constrained()->nullOnDelete();
             if (!Schema::hasColumn('animals', 'breed_id')) $table->foreignId('breed_id')->nullable()->constrained()->nullOnDelete();
-            if (!Schema::hasColumn('animals', 'colour')) $table->string('colour', 80)->nullable();
-            if (!Schema::hasColumn('animals', 'date_of_death')) $table->date('date_of_death')->nullable();
-            if (!Schema::hasColumn('animals', 'disposal_status')) $table->string('disposal_status', 40)->nullable();
             if (!Schema::hasColumn('animals', 'archived_at')) $table->timestamp('archived_at')->nullable()->index();
         });
         Schema::create('animal_identifications', function (Blueprint $table) {
