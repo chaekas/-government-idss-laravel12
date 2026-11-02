@@ -13,9 +13,9 @@ This matrix tracks the current Laravel repository against the supplied Software 
 | Disease reporting | Foundation implemented | Validated case reporting and listing. Add complete lifecycle transitions and case attachments. |
 | Disease investigation | Foundation implemented | Assignment, field observations, findings, recommendations and coordinates. Add investigation approval/sign-off and role-based assignment rules. |
 | Sample collection and tracking | Foundation implemented | Generated sample code/barcode value, collection, movement history, transport and quality statuses. Add printable barcode labels and formal chain-of-custody sign-off. |
-| Laboratory tests and results | Foundation implemented | Result entry, review and approval workflow. Add test catalogue, repeat tests, attachments, QC, equipment/reagent records and immutable approved reports. |
+| Laboratory registry, tests and results | Foundation implemented | Facility registration, result entry, review and approval workflow. Add test catalogue, repeat tests, attachments, QC, equipment/reagent records and immutable approved reports. |
 | Outbreak monitoring | Foundation implemented | Outbreak register with location, counts, severity and response notes. Add linkage to cases, alert thresholds and response lifecycle. |
-| Notifications | Not integrated | Add in-app notifications and configure approved SMS/email providers. |
+| Notifications | Partial | In-app notifications are generated for outbreak records, sample arrival/quality events, and laboratory result review. Approved SMS/email delivery is not configured. |
 | Dashboards and reports | Partial | Counts and recent cases shown. Add full surveillance/laboratory indicators, filters, PDF/Excel exports and scheduled reports. |
 | GIS | Not implemented | Add interactive map, authorized geographic filtering and hotspot analysis using validated coordinates. |
 | UTAMBUZI | Blocked by external dependency | Requires official API documentation, credentials, data mappings, test environment and approval from the system owner. |
