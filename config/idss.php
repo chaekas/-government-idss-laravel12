@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'administrator_aliases' => ['super_admin', 'super-admin', 'administrator', 'admin'],
+
     'roles' => [
         'farmer' => [
             'label' => 'Farmer / Livestock Owner',
