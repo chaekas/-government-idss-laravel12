@@ -42,7 +42,7 @@ class AnimalController extends Controller
     {
         $data = $request->validate([
             'farm_id' => ['required', 'exists:farms,id'],
-            'species' => ['required', 'string', 'max:80'],
+            'species' => ['nullable', 'required_without:species_id', 'string', 'max:80'],
             'species_id' => ['nullable', 'exists:species,id'],
             'breed' => ['nullable', 'string', 'max:100'],
             'breed_id' => ['nullable', 'exists:breeds,id'],
@@ -52,6 +52,10 @@ class AnimalController extends Controller
             'external_identifier' => ['nullable', 'string', 'max:150', 'unique:animals,external_identifier'],
             'notes' => ['nullable', 'string', 'max:3000'],
         ]);
+
+        if (!empty($data['breed_id']) && !empty($data['species_id']) && !Breed::whereKey($data['breed_id'])->where('species_id', $data['species_id'])->exists()) {
+            return back()->withInput()->withErrors(['breed_id' => 'The selected breed does not belong to the selected species.']);
+        }
 
         $farm = Farm::with('farmer')->findOrFail($data['farm_id']);
         $data['farmer_id'] = $farm->farmer_id;
