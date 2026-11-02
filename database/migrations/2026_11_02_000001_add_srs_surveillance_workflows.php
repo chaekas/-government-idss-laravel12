@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('disease_cases') && Schema::hasColumn('disease_cases', 'status')) {
+            Schema::table('disease_cases', function (Blueprint $table) {
+                $table->string('status', 40)->default('reported')->change();
+            });
+        }
         if (!Schema::hasTable('animals')) {
             Schema::create('animals', function (Blueprint $table) {
                 $table->id();
