@@ -28,8 +28,10 @@ class SurveillanceWorkflowTest extends TestCase
         $this->get(route('animals.index'))->assertOk();
         $this->get(route('investigations.index'))->assertOk();
         $this->get(route('samples.index'))->assertOk();
-        $this->get(route('laboratory.index'))->assertOk();
         $this->get(route('outbreaks.index'))->assertOk();
+
+        $this->actingAs($this->makeUser('laboratory_technician'));
+        $this->get(route('laboratory.index'))->assertOk();
     }
 
     public function test_guest_is_redirected_from_surveillance_registers(): void
