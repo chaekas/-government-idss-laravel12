@@ -19,6 +19,12 @@
         <select name="parent_id"><option value="">No parent (top level)</option>@foreach($options['administrativeAreas'] as $option)<option value="{{ $option->id }}" @selected((string)$value === (string)$option->id)>{{ $option->name }} ({{ $option->area_type }})</option>@endforeach</select>
     @elseif($field === 'area_type')
         <select name="area_type" required>@foreach(['region','district','ward','village'] as $option)<option value="{{ $option }}" @selected($value === $option)>{{ ucfirst($option) }}</option>@endforeach</select>
+    @elseif(in_array($field,['notify_field_officers','notify_regional_officers','notify_ministry_officers']))
+        <select name="{{ $field }}"><option value="1" @selected((string)$value === '1')>Yes</option><option value="0" @selected((string)$value === '0')>No</option></select>
+    @elseif($field === 'severity')
+        <select name="severity">@foreach(['low','medium','high','critical'] as $option)<option value="{{ $option }}" @selected($value === $option)>{{ ucfirst($option) }}</option>@endforeach</select>
+    @elseif(in_array($field,['case_threshold','within_hours']))
+        <input type="number" min="1" name="{{ $field }}" value="{{ $value }}" required>
     @elseif($field === 'sort_order')
         <input type="number" min="0" name="{{ $field }}" value="{{ $value }}">
     @else
