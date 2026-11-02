@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title','Users management')
 @section('content')
-<div class="heading"><div><small class="kicker">SUPER ADMINISTRATION / ACCESS CONTROL</small><h1>Users management</h1><p>Create and manage Ministry, field and laboratory staff accounts. Farmers register themselves from the login page and are not managed here.</p></div><a class="button primary" href="{{ route('users.create') }}">＋ Create staff user</a></div>
+<div class="heading"><div><small class="kicker">SUPER ADMINISTRATION / ACCESS CONTROL</small><h1>User management</h1><p>Create and manage Ministry, field and laboratory staff accounts. Farmers register themselves from the login page and are not managed here.</p></div><a class="button primary" href="{{ route('users.create') }}">＋ Create user</a></div>
 <section class="panel"><div class="panel-head"><div><h2>Staff accounts</h2><p>{{ $users->total() }} staff accounts</p></div></div><div class="table-wrap"><table><thead><tr><th>Name / Email</th><th>Role</th><th>Status</th><th>Manage account</th></tr></thead><tbody>
 @forelse($users as $user)
 <tr><td><b>{{ $user->name }}</b><br>{{ $user->email }}</td><td>{{ config('idss.roles.'.$user->role.'.label', in_array($user->role, config('idss.administrator_aliases', []), true) ? 'System Administrator' : str_replace('_',' ',ucfirst($user->role))) }}</td><td>{{ $user->is_active ? 'Active' : 'Inactive' }}</td><td>
