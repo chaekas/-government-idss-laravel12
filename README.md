@@ -19,7 +19,7 @@ Integrated Disease Surveillance System (IDSS) for the Ministry of Livestock and 
 - Disease case reporting with date, symptom, affected/dead count, and severity validation.
 - Disease investigation assignment, field observations, epidemiological findings, recommended actions, and GPS coordinates.
 - Sample registration with generated Sample ID/barcode value, laboratory assignment, quality status, transport state, and movement history.
-- Laboratory test result entry for received, quality-accepted samples.
+- Laboratory facility registration and laboratory test result entry for received, quality-accepted samples.
 - Laboratory result review/approval restricted to laboratory managers and system administrators.
 - Outbreak register with disease, location, case/death counts, severity, coordinates, and response notes.
 - Administrator-only user management: create accounts, assign roles, update profiles, deactivate accounts, and reset passwords.
@@ -101,7 +101,7 @@ This repository is an operational development foundation, not a certified produc
 - Full role/permission matrix and administrative/geographic record-level scoping for every module.
 - Formal disease investigation sign-off and richer case lifecycle/status transitions.
 - Diagnostic test master catalogue, sample quality control inspections, equipment calibration, corrective actions, and immutable approved-result records.
-- Real notification delivery through an approved SMS/email gateway; current audit records do not send external messages.
+- Real notification delivery through an approved SMS/email gateway; in-app notifications exist, but external SMS/email delivery is not configured.
 - PDF/Excel report generation, scheduled reporting, and complete executive/laboratory performance analytics.
 - Interactive GIS maps, hotspot analysis, and map filtering.
 - UTAMBUZI integration, which cannot be activated until the Ministry provides the official API specification, authorized credentials, and test environment.
