@@ -15,12 +15,19 @@ class LaboratoryResultController extends Controller
 {
     public function index()
     {
-        return view('laboratory.index', ['results' => LaboratoryTestResult::with(['sample.diseaseCase', 'laboratory'])->latest()->paginate(15)]);
+        return view('laboratory.index', [
+            'results' => LaboratoryTestResult::with(['sample.diseaseCase', 'laboratory'])->latest()->paginate(15),
+        ]);
     }
 
     public function create()
     {
-        return view('laboratory.create', ['samples' => Sample::where('quality_status', 'accepted')->where('transport_status', 'received')->orderBy('sample_code')->get(), 'laboratories' => Laboratory::where('is_active', true)->orderBy('name')->get()]);
+        return view('laboratory.create', [
+            'samples' => Sample::where('quality_status', 'accepted')
+                ->where('transport_status', 'received')
+                ->orderBy('sample_code')->get(),
+            'laboratories' => Laboratory::where('is_active', true)->orderBy('name')->get(),
+        ]);
     }
 
     public function store(Request $request)
@@ -36,20 +43,38 @@ class LaboratoryResultController extends Controller
             'numeric_unit' => ['nullable', 'string', 'max:50'],
             'technician_comments' => ['nullable', 'string', 'max:3000'],
         ]);
+
         $sample = Sample::findOrFail($data['sample_id']);
         if ($sample->quality_status !== 'accepted' || $sample->transport_status !== 'received') {
-            throw ValidationException::withMessages(['sample_id' => 'The sample must be received by a laboratory and quality-accepted before testing.']);
+            throw ValidationException::withMessages([
+                'sample_id' => 'The sample must be received by a laboratory and quality-accepted before testing.',
+            ]);
         }
         if ($sample->laboratory_id && (int) $sample->laboratory_id !== (int) $data['laboratory_id']) {
-            throw ValidationException::withMessages(['laboratory_id' => 'The selected laboratory does not match the sample destination.']);
+            throw ValidationException::withMessages([
+                'laboratory_id' => 'The selected laboratory does not match the sample destination.',
+            ]);
         }
+
         $data['result_code'] = 'LAB-'.now()->format('ymd').'-'.Str::upper(Str::random(6));
         $data['assigned_technician'] = $request->user()->id;
         $data['status'] = 'submitted_for_review';
         $data['tested_at'] = now();
         $result = LaboratoryTestResult::create($data);
-        Sample::whereKey($data['sample_id'])->update(['test_status' => 'completed']);\n        $sample->diseaseCase()->update(['status' => 'laboratory_testing']);
-        AuditLog::create(['user_id' => $request->user()->id, 'action' => 'laboratory.result_submitted', 'entity_type' => 'laboratory_test_result', 'entity_id' => (string) $result->id, 'ip_address' => $request->ip(), 'description' => 'Submitted result '.$result->result_code, 'created_at' => now()]);
+
+        $sample->update(['test_status' => 'completed']);
+        $sample->diseaseCase()->update(['status' => 'laboratory_testing']);
+
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'laboratory.result_submitted',
+            'entity_type' => 'laboratory_test_result',
+            'entity_id' => (string) $result->id,
+            'ip_address' => $request->ip(),
+            'description' => 'Submitted result '.$result->result_code,
+            'created_at' => now(),
+        ]);
+
         return redirect()->route('laboratory.index')->with('status', 'Laboratory result submitted for review.');
     }
 
@@ -57,22 +82,57 @@ class LaboratoryResultController extends Controller
     {
         abort_unless(in_array($request->user()->role, ['laboratory_manager', 'system_admin', 'administrator', 'admin'], true), 403);
         abort_unless($result->status === 'submitted_for_review', 422, 'Only results awaiting review can be approved or rejected.');
+
         if ((int) $result->assigned_technician === (int) $request->user()->id) {
             throw ValidationException::withMessages([
                 'decision' => 'The person who performed a laboratory test cannot approve or reject the same result. Assign an independent authorized reviewer.',
             ]);
         }
-        $data = $request->validate(['decision' => ['required', 'in:approve,reject'], 'review_comments' => ['required', 'string', 'max:3000']]);
-        $result->update(['reviewed_by' => $request->user()->id, 'review_comments' => $data['review_comments'], 'status' => $data['decision'] === 'approve' ? 'approved' : 'rejected', 'approved_at' => $data['decision'] === 'approve' ? now() : null]);
-        if ($data['decision'] === 'approve') {
-            $result->sample()->update(['test_status' => 'approved', 'result_summary' => $result->qualitative_result ?: $result->observations, 'approved_at' => now()]);
+
+        $data = $request->validate([
+            'decision' => ['required', 'in:approve,reject'],
+            'review_comments' => ['required', 'string', 'max:3000'],
+        ]);
+
+        $approved = $data['decision'] === 'approve';
+        $result->update([
+            'reviewed_by' => $request->user()->id,
+            'review_comments' => $data['review_comments'],
+            'status' => $approved ? 'approved' : 'rejected',
+            'approved_at' => $approved ? now() : null,
+        ]);
+
+        if ($approved) {
+            $result->sample()->update([
+                'test_status' => 'approved',
+                'result_summary' => $result->qualitative_result ?: $result->observations,
+                'approved_at' => now(),
+            ]);
             $result->sample->diseaseCase()->update(['status' => 'confirmed']);
+        } else {
+            $result->sample->diseaseCase()->update(['status' => 'rejected']);
         }
+
         $caseReporter = $result->sample->diseaseCase->reporter;
         if ($caseReporter) {
-            UserNotification::create(['user_id' => $caseReporter->id, 'title' => 'Laboratory result reviewed', 'message' => $result->result_code.' was '.($data['decision'] === 'approve' ? 'approved' : 'rejected').' by the laboratory reviewer. Review comments: '.$data['review_comments'], 'category' => 'laboratory']);
+            UserNotification::create([
+                'user_id' => $caseReporter->id,
+                'title' => 'Laboratory result reviewed',
+                'message' => $result->result_code.' was '.($approved ? 'approved' : 'rejected').' by the laboratory reviewer. Review comments: '.$data['review_comments'],
+                'category' => 'laboratory',
+            ]);
         }
-        AuditLog::create(['user_id' => $request->user()->id, 'action' => 'laboratory.result_'.$data['decision'], 'entity_type' => 'laboratory_test_result', 'entity_id' => (string) $result->id, 'ip_address' => $request->ip(), 'description' => ucfirst($data['decision']).' laboratory result '.$result->result_code, 'created_at' => now()]);
+
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'laboratory.result_'.$data['decision'],
+            'entity_type' => 'laboratory_test_result',
+            'entity_id' => (string) $result->id,
+            'ip_address' => $request->ip(),
+            'description' => ucfirst($data['decision']).' laboratory result '.$result->result_code,
+            'created_at' => now(),
+        ]);
+
         return redirect()->route('laboratory.index')->with('status', 'Laboratory review recorded.');
     }
 }
