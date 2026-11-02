@@ -64,6 +64,25 @@ class UserController extends Controller
             'password' => ['nullable', 'confirmed', Password::min(12)->letters()->numbers()],
         ]);
 
+        // Do not allow the signed-in administrator to remove their own admin access.
+        if ($user->is($request->user()) && ($data['role'] !== 'system_admin' || !$request->boolean('is_active'))) {
+            return back()->withErrors(['role' => 'You cannot demote or deactivate your own system administrator account.']);
+        }
+
+        // Never allow the last active system administrator to be demoted or disabled.
+        $removingAdminAccess = $user->role === 'system_admin'
+            && ($data['role'] !== 'system_admin' || !$request->boolean('is_active'));
+        if ($removingAdminAccess) {
+            $otherActiveAdmins = User::where('role', 'system_admin')
+                ->where('is_active', true)
+                ->whereKeyNot($user->id)
+                ->count();
+
+            if ($otherActiveAdmins < 1) {
+                return back()->withErrors(['role' => 'At least one active system administrator must remain.']);
+            }
+        }
+
         if ($data['role'] !== 'farmer') {
             $data['farmer_id'] = null;
         }
@@ -71,10 +90,6 @@ class UserController extends Controller
             unset($data['password']);
         } else {
             $data['password'] = Hash::make($data['password']);
-        }
-
-        if ($user->is($request->user()) && !$request->boolean('is_active')) {
-            return back()->withErrors(['is_active' => 'You cannot deactivate your own account.']);
         }
 
         $user->update($data);
