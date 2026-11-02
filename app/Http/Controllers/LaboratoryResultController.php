@@ -131,13 +131,18 @@ class LaboratoryResultController extends Controller
         ]);
 
         if ($approved) {
-            $allResultsApproved = $sample->results()
-                ->where('status', '!=', 'approved')
-                ->where('id', '!=', $result->id)
-                ->doesntExist();
+            // A rejected historical attempt does not block a later approved repeat.
+            // The latest result for each named test is the operative result.
+            $latestByTest = $sample->results()
+                ->orderByDesc('id')
+                ->get()
+                ->groupBy('test_name')
+                ->map(fn ($testResults) => $testResults->first());
+            $allLatestResultsApproved = $latestByTest->isNotEmpty()
+                && $latestByTest->every(fn (LaboratoryTestResult $item) => $item->status === 'approved');
 
-            if ($allResultsApproved) {
-                $approvedResults = $sample->results()->where('status', 'approved')->get();
+            if ($allLatestResultsApproved) {
+                $approvedResults = $latestByTest->values();
                 $summaries = $approvedResults->map(function (LaboratoryTestResult $item) {
                     $finding = $item->qualitative_result
                         ?: ($item->numeric_result !== null ? $item->numeric_result.' '.$item->numeric_unit : $item->observations);
@@ -151,11 +156,23 @@ class LaboratoryResultController extends Controller
                     'released_at' => now(),
                 ]);
 
-                $findingText = strtolower($summaries);
-                $caseStatus = preg_match('/\b(positive|detected|confirmed)\b/', $findingText)
+                $classifications = $approvedResults->map(function (LaboratoryTestResult $item) {
+                    $finding = strtolower((string) ($item->qualitative_result ?: $item->observations));
+                    if (preg_match('/\\b(negative|not detected|absent)\\b/', $finding)) {
+                        return 'negative';
+                    }
+                    if (preg_match('/\\b(positive|detected|confirmed)\\b/', $finding)) {
+                        return 'positive';
+                    }
+                    return 'inconclusive';
+                });
+                $caseStatus = $classifications->contains('positive')
                     ? 'confirmed'
-                    : (preg_match('/\b(negative|not detected|absent)\b/', $findingText) ? 'not_confirmed' : 'laboratory_result_approved');
+                    : ($classifications->every(fn ($value) => $value === 'negative') ? 'not_confirmed' : 'laboratory_result_approved');
                 $sample->diseaseCase()->update(['status' => $caseStatus]);
+            } else {
+                $sample->update(['test_status' => 'completed']);
+            }
 
                 SampleMovement::create([
                     'sample_id' => $sample->id,
