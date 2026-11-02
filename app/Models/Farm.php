@@ -28,4 +28,5 @@ class Farm extends Model
     public function farmType(): BelongsTo { return $this->belongsTo(FarmType::class); }
     public function administrativeArea(): BelongsTo { return $this->belongsTo(AdministrativeArea::class); }
     public function animals(): HasMany { return $this->hasMany(Animal::class); }
+    public function locations(): HasMany { return $this->hasMany(FarmLocation::class); }
 }
