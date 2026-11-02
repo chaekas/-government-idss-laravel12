@@ -10,7 +10,7 @@ class Sample extends Model
 {
     protected $fillable = [
         'sample_code', 'barcode_value', 'disease_case_id', 'laboratory_id', 'collected_by',
-        'collection_date', 'received_at', 'sample_type', 'collection_notes', 'transport_status',
+        'collection_date', 'received_at', 'sample_type', 'sample_type_id', 'collection_notes', 'transport_status',
         'quality_status', 'rejection_reason', 'test_status', 'result_summary', 'approved_at',
         'laboratory_reference_number', 'laboratory_section', 'assigned_technician', 'assigned_by',
         'assigned_at', 'testing_started_at', 'testing_completed_at', 'released_at', 'packaged_at',
@@ -31,6 +31,7 @@ class Sample extends Model
     }
 
     public function diseaseCase(): BelongsTo { return $this->belongsTo(DiseaseCase::class); }
+    public function sampleType(): BelongsTo { return $this->belongsTo(SampleType::class); }
     public function laboratory(): BelongsTo { return $this->belongsTo(Laboratory::class); }
     public function collector(): BelongsTo { return $this->belongsTo(User::class, 'collected_by'); }
     public function assignedTechnician(): BelongsTo { return $this->belongsTo(User::class, 'assigned_technician'); }
