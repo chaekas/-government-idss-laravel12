@@ -7,6 +7,7 @@ use App\Models\DiseaseCase;
 use App\Models\DiseaseCategory;
 use App\Models\AdministrativeArea;
 use App\Models\Outbreak;
+use App\Models\OutbreakStatusHistory;
 use App\Models\User;
 use App\Models\UserNotification;
 use Illuminate\Http\Request;
@@ -49,6 +50,7 @@ class OutbreakController extends Controller
         DB::transaction(function()use($data,$caseIds,$request,&$outbreak){
             $outbreak=Outbreak::create($data);
             $outbreak->diseaseCases()->sync($caseIds);
+            OutbreakStatusHistory::create(['outbreak_id'=>$outbreak->id,'from_status'=>null,'to_status'=>'suspected','reason'=>'Initial suspected outbreak record.','changed_by'=>$request->user()->id,'changed_at'=>now()]);
             AuditLog::create(['user_id'=>$request->user()->id,'action'=>'outbreak.created','entity_type'=>'outbreak','entity_id'=>(string)$outbreak->id,'ip_address'=>$request->ip(),'description'=>'Recorded suspected outbreak '.$outbreak->outbreak_code,'created_at'=>now()]);
         });
         $this->notifyOutbreakStakeholders($outbreak,'Suspected disease outbreak recorded',$outbreak->outbreak_code.' — '.$outbreak->disease_name.' in '.$outbreak->district.', '.$outbreak->region.'. Verify through the official investigation workflow.');
@@ -67,11 +69,13 @@ class OutbreakController extends Controller
             foreach($cases as $case) if($case->farm?->district!==$data['district'] || $case->farm?->region!==$data['region']) throw ValidationException::withMessages(['case_ids'=>'Only disease cases from the outbreak district and region can be linked.']);
             $data['cases_count']=$cases->count(); $data['deaths_count']=$cases->sum('birds_dead');
         }
+        $previousStatus=$outbreak->status;
         $data['modified_by']=$request->user()->id;
         if($data['status']==='active' && !$outbreak->confirmed_at) $data['confirmed_at']=now();
         if($data['status']==='closed') $data['closed_at']=now();
         DB::transaction(function()use($outbreak,$data,$caseIds,$request){
             $outbreak->update($data); $outbreak->diseaseCases()->sync($caseIds);
+            if($previousStatus!==$outbreak->status) OutbreakStatusHistory::create(['outbreak_id'=>$outbreak->id,'from_status'=>$previousStatus,'to_status'=>$outbreak->status,'reason'=>$data['response_actions'] ?? null,'changed_by'=>$request->user()->id,'changed_at'=>now()]);
             AuditLog::create(['user_id'=>$request->user()->id,'action'=>'outbreak.updated','entity_type'=>'outbreak','entity_id'=>(string)$outbreak->id,'ip_address'=>$request->ip(),'description'=>'Updated outbreak '.$outbreak->outbreak_code.' to '.$outbreak->status,'created_at'=>now()]);
         });
         $this->notifyOutbreakStakeholders($outbreak,'Disease outbreak status updated',$outbreak->outbreak_code.' is now '.$outbreak->status.'.');
