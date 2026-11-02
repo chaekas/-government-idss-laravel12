@@ -58,7 +58,7 @@ class FarmController extends Controller
         ]);
 
         $potentialDuplicate = null;
-        if ($data['latitude'] !== null && $data['longitude'] !== null) {
+        if (($data['latitude'] ?? null) !== null && ($data['longitude'] ?? null) !== null) {
             $potentialDuplicate = Farm::where('farmer_id', $data['farmer_id'])
                 ->where('latitude', $data['latitude'])
                 ->where('longitude', $data['longitude'])
