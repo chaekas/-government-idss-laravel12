@@ -66,42 +66,42 @@ Route::middleware('auth')->group(function () {
     });
 
     // Sample visibility is shared by field, laboratory and surveillance roles.
-    Route::middleware('role:field_officer,regional_veterinary_officer,laboratory_technician,laboratory_manager,zonal_laboratory_administrator,mlf_officer,system_admin,administrator,admin')->group(function () {
+    Route::middleware('role:field_officer,regional_veterinary_officer,laboratory_technician,laboratory_manager,zonal_laboratory_administrator,mlf_officer,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::get('/samples', [SampleController::class, 'index'])->name('samples.index');
     });
 
     // Only field collection staff can create samples. Laboratory staff record
     // custody/receipt events; farmers and unrelated roles cannot mutate custody.
-    Route::middleware('role:field_officer,system_admin,administrator,admin')->group(function () {
+    Route::middleware('role:field_officer,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::get('/samples/create', [SampleController::class, 'create'])->name('samples.create');
         Route::post('/samples', [SampleController::class, 'store'])->name('samples.store');
     });
-    Route::middleware('role:field_officer,regional_veterinary_officer,laboratory_technician,laboratory_manager,zonal_laboratory_administrator,system_admin,administrator,admin')->group(function () {
+    Route::middleware('role:field_officer,regional_veterinary_officer,laboratory_technician,laboratory_manager,zonal_laboratory_administrator,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::put('/samples/{sample}', [SampleController::class, 'update'])->name('samples.update');
     });
-    Route::middleware('role:laboratory_manager,zonal_laboratory_administrator,system_admin,administrator,admin')->group(function () {
+    Route::middleware('role:laboratory_manager,zonal_laboratory_administrator,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::put('/samples/{sample}/assign', [SampleController::class, 'assign'])->name('samples.assign');
     });
 
     // Laboratory registry administration.
-    Route::middleware('role:system_admin,administrator,admin,mlf_officer,zonal_laboratory_administrator')->group(function () {
+    Route::middleware('role:system_admin,super_admin,super-admin,administrator,admin,mlf_officer,zonal_laboratory_administrator')->group(function () {
         Route::get('/laboratories', [LaboratoryController::class, 'index'])->name('laboratories.index');
     });
-    Route::middleware('role:system_admin,administrator,admin,zonal_laboratory_administrator')->group(function () {
+    Route::middleware('role:system_admin,super_admin,super-admin,administrator,admin,zonal_laboratory_administrator')->group(function () {
         Route::get('/laboratories/create', [LaboratoryController::class, 'create'])->name('laboratories.create');
         Route::post('/laboratories', [LaboratoryController::class, 'store'])->name('laboratories.store');
     });
 
     // Technicians submit results; only an independent laboratory manager (or
     // controlled system administrator) can approve/reject a result.
-    Route::middleware('role:laboratory_technician,laboratory_manager,zonal_laboratory_administrator,mlf_officer,system_admin,administrator,admin')->group(function () {
+    Route::middleware('role:laboratory_technician,laboratory_manager,zonal_laboratory_administrator,mlf_officer,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::get('/laboratory', [LaboratoryResultController::class, 'index'])->name('laboratory.index');
     });
     Route::middleware('role:laboratory_technician')->group(function () {
         Route::get('/laboratory/create', [LaboratoryResultController::class, 'create'])->name('laboratory.create');
         Route::post('/laboratory', [LaboratoryResultController::class, 'store'])->name('laboratory.store');
     });
-    Route::middleware('role:laboratory_manager,system_admin,administrator,admin')->group(function () {
+    Route::middleware('role:laboratory_manager,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
     });
 
