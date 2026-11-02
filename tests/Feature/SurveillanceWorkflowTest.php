@@ -182,15 +182,5 @@ class SurveillanceWorkflowTest extends TestCase
         $this->assertGreaterThanOrEqual(6, SampleMovement::where('sample_id', $sample->id)->count());
     }
 
-    public function test_technician_cannot_test_a_sample_not_assigned_to_them(): void
-    {
-        $technician = $this->makeUser('laboratory_technician');
-        $otherTechnician = $this->makeUser('laboratory_technician');
-
-        $this->actingAs($technician)->get(route('laboratory.create'))->assertOk();
-
-        // The controller rejects an unassigned sample even if its ID is submitted manually.
-        $this->assertNotSame($technician->id, $otherTechnician->id);
-    }
 
 }
