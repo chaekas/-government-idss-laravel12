@@ -43,6 +43,14 @@ return new class extends Migration
             $table->index(['disease_case_id', 'changed_at']);
         });
 
+        Schema::create('outbreak_status_history', function (Blueprint $table) {
+            $table->id(); $table->foreignId('outbreak_id')->constrained()->restrictOnDelete();
+            $table->string('from_status',40)->nullable(); $table->string('to_status',40);
+            $table->text('reason')->nullable(); $table->foreignId('changed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('changed_at')->index(); $table->timestamps();
+            $table->index(['outbreak_id','changed_at']);
+        });
+
         Schema::create('investigation_histories', function (Blueprint $table) {
             $table->id(); $table->foreignId('investigation_id')->constrained()->restrictOnDelete();
             $table->string('event_type', 60)->index(); $table->json('previous_values')->nullable();
