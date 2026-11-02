@@ -11,12 +11,12 @@ class Farmer extends Model
     protected $fillable = [
         'farmer_code', 'full_name', 'phone', 'email', 'national_id', 'region', 'district',
         'ward', 'village', 'address', 'sex', 'date_of_birth', 'nationality',
-        'status', 'archived_at', 'created_by', 'modified_by', 'duplicate_verified_at', 'duplicate_verified_by',
+        'status', 'archived_at', 'created_by', 'modified_by',
     ];
 
     protected function casts(): array
     {
-        return ['date_of_birth' => 'date', 'archived_at' => 'datetime', 'duplicate_verified_at' => 'datetime'];
+        return ['date_of_birth' => 'date', 'archived_at' => 'datetime'];
     }
 
     public function farms(): BelongsToMany
