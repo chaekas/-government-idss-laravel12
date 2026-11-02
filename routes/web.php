@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AnimalController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiseaseCaseController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\FarmerController;
 use App\Http\Controllers\InvestigationController;
 use App\Http\Controllers\LaboratoryResultController;
 use App\Http\Controllers\OutbreakController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SampleController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -38,11 +40,14 @@ Route::middleware('auth')->group(function () {
         Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
     });
     Route::resource('outbreaks', OutbreakController::class)->only(['index', 'create', 'store']);
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::put('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
 
     Route::middleware('role:system_admin,administrator,admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
     });
 });
