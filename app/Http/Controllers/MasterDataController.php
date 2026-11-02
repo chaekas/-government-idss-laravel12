@@ -1,0 +1,115 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\AdministrativeArea;
+use App\Models\Breed;
+use App\Models\DiseaseCategory;
+use App\Models\DiseaseSymptom;
+use App\Models\FarmType;
+use App\Models\LaboratoryTest;
+use App\Models\SampleType;
+use App\Models\Species;
+use App\Models\TestMethod;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+
+class MasterDataController extends Controller
+{
+    private function definitions(): array
+    {
+        return [
+            'farm-types' => ['title' => 'Farm types', 'model' => FarmType::class, 'fields' => ['code','name','description','sort_order','is_active']],
+            'species' => ['title' => 'Species', 'model' => Species::class, 'fields' => ['code','name','description','is_active']],
+            'breeds' => ['title' => 'Breeds', 'model' => Breed::class, 'fields' => ['species_id','code','name','description','is_active']],
+            'disease-categories' => ['title' => 'Disease categories', 'model' => DiseaseCategory::class, 'fields' => ['code','name','description','is_active']],
+            'disease-symptoms' => ['title' => 'Disease symptoms', 'model' => DiseaseSymptom::class, 'fields' => ['code','name','description','is_active']],
+            'sample-types' => ['title' => 'Sample types', 'model' => SampleType::class, 'fields' => ['code','name','description','is_active']],
+            'laboratory-tests' => ['title' => 'Laboratory tests', 'model' => LaboratoryTest::class, 'fields' => ['code','name','disease_category_id','specimen_requirements','description','is_active']],
+            'test-methods' => ['title' => 'Test methods', 'model' => TestMethod::class, 'fields' => ['code','name','standard_reference','is_active']],
+            'administrative-areas' => ['title' => 'Administrative areas', 'model' => AdministrativeArea::class, 'fields' => ['parent_id','area_type','code','name','source_reference','is_active']],
+        ];
+    }
+
+    private function definition(string $type): array
+    {
+        abort_unless(isset($this->definitions()[$type]), 404);
+        return $this->definitions()[$type];
+    }
+
+    public function index(Request $request, string $type)
+    {
+        $definition = $this->definition($type);
+        $model = $definition['model'];
+        $records = $model::query()->when($request->filled('q'), function ($query) use ($request) {
+            $term = '%'.$request->string('q')->toString().'%';
+            $query->where(function ($nested) use ($term) {
+                $nested->where('code', 'like', $term)->orWhere('name', 'like', $term);
+            });
+        })->orderBy('name')->paginate(20)->withQueryString();
+
+        return view('master-data.index', compact('type', 'definition', 'records'));
+    }
+
+    public function create(string $type)
+    {
+        $definition = $this->definition($type);
+        return view('master-data.form', compact('type', 'definition'));
+    }
+
+    public function store(Request $request, string $type)
+    {
+        $definition = $this->definition($type);
+        $data = $this->validatedData($request, $type);
+        $definition['model']::create($data);
+        return redirect()->route('master-data.index', $type)->with('status', $definition['title'].' record created.');
+    }
+
+    public function edit(string $type, int $record)
+    {
+        $definition = $this->definition($type);
+        $item = $definition['model']::findOrFail($record);
+        return view('master-data.form', compact('type', 'definition', 'item'));
+    }
+
+    public function update(Request $request, string $type, int $record)
+    {
+        $definition = $this->definition($type);
+        $item = $definition['model']::findOrFail($record);
+        $item->update($this->validatedData($request, $type, $item->getKey()));
+        return redirect()->route('master-data.index', $type)->with('status', $definition['title'].' record updated.');
+    }
+
+    public function destroy(string $type, int $record)
+    {
+        $definition = $this->definition($type);
+        $item = $definition['model']::findOrFail($record);
+        $item->delete();
+        return redirect()->route('master-data.index', $type)->with('status', 'Reference record archived.');
+    }
+
+    private function validatedData(Request $request, string $type, ?int $ignoreId = null): array
+    {
+        $unique = fn (string $table, string $column = 'code') => Rule::unique($table, $column)->ignore($ignoreId);
+        $rules = match ($type) {
+            'farm-types' => ['code' => ['required','string','max:80',$unique('farm_types')], 'name' => ['required','string','max:120',$unique('farm_types','name')], 'description' => ['nullable','string','max:2000'], 'sort_order' => ['nullable','integer','min:0'], 'is_active' => ['required','boolean']],
+            'species' => ['code' => ['required','string','max:80',$unique('species')], 'name' => ['required','string','max:120',$unique('species','name')], 'description' => ['nullable','string','max:2000'], 'is_active' => ['required','boolean']],
+            'breeds' => ['species_id' => ['required','exists:species,id'], 'code' => ['required','string','max:80'], 'name' => ['required','string','max:120'], 'description' => ['nullable','string','max:2000'], 'is_active' => ['required','boolean']],
+            'disease-categories' => ['code' => ['required','string','max:80',$unique('disease_categories')], 'name' => ['required','string','max:160',$unique('disease_categories','name')], 'description' => ['nullable','string','max:2000'], 'is_active' => ['required','boolean']],
+            'disease-symptoms' => ['code' => ['required','string','max:80',$unique('disease_symptoms')], 'name' => ['required','string','max:160',$unique('disease_symptoms','name')], 'description' => ['nullable','string','max:2000'], 'is_active' => ['required','boolean']],
+            'sample-types' => ['code' => ['required','string','max:80',$unique('sample_types')], 'name' => ['required','string','max:160',$unique('sample_types','name')], 'description' => ['nullable','string','max:2000'], 'is_active' => ['required','boolean']],
+            'laboratory-tests' => ['code' => ['required','string','max:80',$unique('laboratory_tests')], 'name' => ['required','string','max:180'], 'disease_category_id' => ['nullable','exists:disease_categories,id'], 'specimen_requirements' => ['nullable','string','max:255'], 'description' => ['nullable','string','max:2000'], 'is_active' => ['required','boolean']],
+            'test-methods' => ['code' => ['required','string','max:80',$unique('test_methods')], 'name' => ['required','string','max:160'], 'standard_reference' => ['nullable','string','max:180'], 'is_active' => ['required','boolean']],
+            'administrative-areas' => ['parent_id' => ['nullable','exists:administrative_areas,id'], 'area_type' => ['required',Rule::in(['region','district','ward','village'])], 'code' => ['required','string','max:80',$unique('administrative_areas')], 'name' => ['required','string','max:160'], 'source_reference' => ['nullable','string','max:180'], 'is_active' => ['required','boolean']],
+            default => abort(404),
+        };
+
+        $data = $request->validate($rules);
+        if ($type === 'breeds') {
+            $exists = Breed::where('species_id', $data['species_id'])->where('code', $data['code'])->when($ignoreId, fn ($q) => $q->whereKeyNot($ignoreId))->exists();
+            abort_if($exists, 422, 'The breed code already exists for this species.');
+        }
+        return $data;
+    }
+}
