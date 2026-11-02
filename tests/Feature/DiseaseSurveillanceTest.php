@@ -123,7 +123,7 @@ class DiseaseSurveillanceTest extends TestCase
 
     public function test_outbreak_can_link_cases_and_recalculate_case_and_death_counts(): void
     {
-        $officer=$this->user('field_officer'); $farm=$this->farm($officer); $case=$this->case($officer,$farm,['birds_affected'=>12,'birds_dead'=>3]);
+        $officer=$this->user('field_officer'); $regional=$this->user('regional_veterinary_officer'); $farm=$this->farm($officer); $case=$this->case($officer,$farm,['birds_affected'=>12,'birds_dead'=>3]);
         $this->actingAs($officer)->post(route('outbreaks.store'),[
             'disease_name'=>'Suspected Newcastle disease','region'=>'Dodoma','district'=>'Kondoa','start_date'=>now()->subDay()->toDateString(),
             'cases_count'=>99,'deaths_count'=>50,'severity'=>'high','case_ids'=>[$case->id],
@@ -132,7 +132,7 @@ class DiseaseSurveillanceTest extends TestCase
         $this->assertSame(1,$outbreak->cases_count);
         $this->assertSame(3,$outbreak->deaths_count);
         $this->assertTrue($outbreak->diseaseCases()->whereKey($case->id)->exists());
-        $this->actingAs($officer)->put(route('outbreaks.update',$outbreak),[
+        $this->actingAs($regional)->put(route('outbreaks.update',$outbreak),[
             'disease_name'=>$outbreak->disease_name,'region'=>'Dodoma','district'=>'Kondoa','start_date'=>$outbreak->start_date->toDateString(),
             'cases_count'=>1,'deaths_count'=>3,'severity'=>'high','status'=>'active','case_ids'=>[$case->id],
         ])->assertRedirect(route('outbreaks.index'));
