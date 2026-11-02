@@ -23,7 +23,7 @@ class Farm extends Model
     public function farmer(): BelongsTo { return $this->belongsTo(Farmer::class); }
     public function farmers(): BelongsToMany
     {
-        return $this->belongsToMany(Farmer::class)->withPivot(['ownership_type', 'ownership_share', 'effective_from', 'effective_to', 'is_primary'])->withTimestamps();
+        return $this->belongsToMany(Farmer::class, 'farmer_farm')->withPivot(['ownership_type', 'ownership_share', 'effective_from', 'effective_to', 'is_primary'])->withTimestamps();
     }
     public function farmType(): BelongsTo { return $this->belongsTo(FarmType::class); }
     public function administrativeArea(): BelongsTo { return $this->belongsTo(AdministrativeArea::class); }
