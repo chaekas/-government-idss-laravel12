@@ -95,7 +95,7 @@ class DiseaseCaseController extends Controller
         ]);
 
         $farm=Farm::findOrFail($data['farm_id']);
-        if($request->user()->role==='farmer' && !$farm->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists()) throw ValidationException::withMessages(['farm_id'=>'You may only update a report to a farm linked to your farmer account.']);
+        if($request->user()->role==='farmer' && !$farm->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists()) throw ValidationException::withMessages(['farm_id'=>'You may only report against a farm linked to your farmer account.']);
         if (!empty($data['animal_id']) && !Animal::whereKey($data['animal_id'])->where('farm_id',$farm->id)->exists()) {
             throw ValidationException::withMessages(['animal_id'=>'The selected animal does not belong to the selected farm.']);
         }
@@ -161,6 +161,7 @@ class DiseaseCaseController extends Controller
             'attachments'=>['nullable','array','max:5'],'attachments.*'=>['file','mimes:jpg,jpeg,png,pdf','max:10240'],
         ]);
         $farm=Farm::findOrFail($data['farm_id']);
+        if($request->user()->role==='farmer' && !$farm->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists()) throw ValidationException::withMessages(['farm_id'=>'You may only update a report to a farm linked to your farmer account.']);
         if (!empty($data['animal_id']) && !Animal::whereKey($data['animal_id'])->where('farm_id',$farm->id)->exists()) throw ValidationException::withMessages(['animal_id'=>'The selected animal does not belong to the selected farm.']);
         if (empty($data['latitude']) && empty($data['longitude']) && empty($farm->latitude) && empty($farm->longitude)) throw ValidationException::withMessages(['latitude'=>'Capture the outbreak GPS coordinates or register coordinates on the farm record.']);
         $files=$request->file('attachments',[]); $symptoms=$data['symptom_ids'] ?? [];
