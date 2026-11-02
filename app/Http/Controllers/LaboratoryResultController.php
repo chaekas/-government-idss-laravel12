@@ -120,7 +120,7 @@ class LaboratoryResultController extends Controller
             'review_comments' => ['required', 'string', 'max:3000'],
         ]);
 
-        $sample = $result->sample()->with(['diseaseCase.reporter', 'collector', 'assignedTechnician', 'results'])->firstOrFail();
+        $sample = $result->sample()->with(['diseaseCase.reporter', 'collector', 'assignedTechnician'])->firstOrFail();
         $approved = $data['decision'] === 'approve';
 
         $result->update([
@@ -170,23 +170,29 @@ class LaboratoryResultController extends Controller
                     ? 'confirmed'
                     : ($classifications->every(fn ($value) => $value === 'negative') ? 'not_confirmed' : 'laboratory_result_approved');
                 $sample->diseaseCase()->update(['status' => $caseStatus]);
-            } else {
-                $sample->update(['test_status' => 'completed']);
-            }
 
                 SampleMovement::create([
                     'sample_id' => $sample->id,
                     'event_type' => 'final_result_released',
                     'from_location' => 'Laboratory manager review',
                     'to_location' => 'Disease surveillance / authorized case team',
-                    'notes' => 'All recorded tests have been approved. Final result: '.$summaries,
+                    'notes' => 'All latest recorded tests have been approved. Final result: '.$summaries,
                     'recorded_by' => $request->user()->id,
                     'event_at' => now(),
                 ]);
-
                 $this->notifyStakeholders($sample, 'Final laboratory result released', 'Sample '.$sample->sample_code.' has completed testing and independent review. Final result: '.$summaries.'. Case status: '.$caseStatus.'.');
             } else {
-                $this->notifyStakeholders($sample, 'Laboratory test approved', $result->result_code.' was approved. Other tests for sample '.$sample->sample_code.' remain under review, so the sample is not yet released as final.');
+                $sample->update(['test_status' => 'completed']);
+                SampleMovement::create([
+                    'sample_id' => $sample->id,
+                    'event_type' => 'test_result_approved',
+                    'from_location' => 'Laboratory manager review',
+                    'to_location' => 'Laboratory workflow',
+                    'notes' => $result->result_code.' was approved; at least one other test remains pending or requires repeat testing.',
+                    'recorded_by' => $request->user()->id,
+                    'event_at' => now(),
+                ]);
+                $this->notifyStakeholders($sample, 'Laboratory test approved', $result->result_code.' was approved. Sample '.$sample->sample_code.' remains in the laboratory workflow until all latest test results are approved.');
             }
         } else {
             $sample->update([
@@ -208,7 +214,7 @@ class LaboratoryResultController extends Controller
         $this->audit($request, 'laboratory.result_'.$data['decision'], $result, ucfirst($data['decision']).' result '.$result->result_code.' for sample '.$sample->sample_code.'.');
 
         return redirect()->route('laboratory.index')->with('status', $approved
-            ? 'Laboratory review recorded. The sample is released as final only after all recorded tests are approved.'
+            ? 'Laboratory review recorded. The sample is released as final only after all latest recorded tests are approved.'
             : 'Result returned to the assigned technician for correction or repeat testing.');
     }
 
