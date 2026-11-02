@@ -10,7 +10,7 @@ class Animal extends Model
 {
     protected $fillable = [
         'animal_code', 'farm_id', 'farmer_id', 'species_id', 'breed_id', 'species', 'breed',
-        'sex', 'colour', 'date_of_birth', 'date_of_death', 'identification_method',
+        'sex', 'date_of_birth', 'identification_method',
         'external_identifier', 'ownership_status', 'disposal_status', 'notes', 'archived_at',
     ];
 
