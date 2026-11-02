@@ -2,7 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\DiseaseCase;
+use App\Models\Farm;
+use App\Models\Farmer;
+use App\Models\Investigation;
+use App\Models\Laboratory;
+use App\Models\LaboratoryTestResult;
+use App\Models\Sample;
+use App\Models\SampleMovement;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
