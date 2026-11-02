@@ -3,7 +3,7 @@
 @section('content')
 @php
     $role = auth()->user()->role;
-    $adminRoles = ['system_admin', 'administrator', 'admin'];
+    $adminRoles = ['system_admin', 'super_admin', 'super-admin', 'administrator', 'admin'];
     $labRoles = ['laboratory_technician', 'laboratory_manager', 'zonal_laboratory_administrator'];
     $canRegister = in_array($role, ['field_officer', ...$adminRoles], true);
     $canAssign = in_array($role, ['laboratory_manager', 'zonal_laboratory_administrator', ...$adminRoles], true);
