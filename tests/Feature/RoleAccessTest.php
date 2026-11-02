@@ -13,17 +13,23 @@ class RoleAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_field_officer_cannot_open_administrator_user_management(): void
+    private function makeUser(string $role, ?int $farmerId = null): User
     {
-        $officer = User::create([
-            'name' => 'Field Officer',
-            'email' => 'field.officer@example.test',
+        return User::create([
+            'name' => 'Test '.str_replace('_', ' ', $role),
+            'email' => $role.'-'.uniqid().'@example.test',
             'password' => 'Correct-Horse-Battery-42!',
-            'role' => 'field_officer',
+            'role' => $role,
+            'farmer_id' => $farmerId,
             'is_active' => true,
         ]);
+    }
 
-        $this->actingAs($officer)->get(route('users.index'))->assertForbidden();
+    public function test_field_officer_cannot_open_administrator_user_management(): void
+    {
+        $this->actingAs($this->makeUser('field_officer'))
+            ->get(route('users.index'))
+            ->assertForbidden();
     }
 
     public function test_farmer_cannot_open_staff_farmer_registry(): void
@@ -34,16 +40,26 @@ class RoleAccessTest extends TestCase
             'region' => 'Dodoma',
             'district' => 'Kondoa',
         ]);
-        $farmerUser = User::create([
-            'name' => 'Farmer User',
-            'email' => 'farmer@example.test',
-            'password' => 'Correct-Horse-Battery-42!',
-            'role' => 'farmer',
-            'farmer_id' => $farmerRecord->id,
-            'is_active' => true,
-        ]);
 
-        $this->actingAs($farmerUser)->get(route('farmers.index'))->assertForbidden();
+        $this->actingAs($this->makeUser('farmer', $farmerRecord->id))
+            ->get(route('farmers.index'))
+            ->assertForbidden();
+    }
+
+    public function test_farmer_cannot_access_staff_or_laboratory_workflows(): void
+    {
+        $farmerRecord = Farmer::create([
+            'farmer_code' => 'FRM-TEST-OWN03',
+            'full_name' => 'Farmer Workflow Test',
+            'region' => 'Dodoma',
+            'district' => 'Kondoa',
+        ]);
+        $farmer = $this->makeUser('farmer', $farmerRecord->id);
+
+        $this->actingAs($farmer)->get(route('farms.index'))->assertForbidden();
+        $this->get(route('samples.index'))->assertForbidden();
+        $this->get(route('laboratory.index'))->assertForbidden();
+        $this->get(route('users.index'))->assertForbidden();
     }
 
     public function test_farmer_only_sees_cases_linked_to_their_farm(): void
@@ -76,22 +92,8 @@ class RoleAccessTest extends TestCase
             'district' => 'Arusha',
             'bird_count' => 40,
         ]);
-        $farmerUser = User::create([
-            'name' => 'Owner Farmer Login',
-            'email' => 'owner.farmer@example.test',
-            'password' => 'Correct-Horse-Battery-42!',
-            'role' => 'farmer',
-            'farmer_id' => $ownFarmer->id,
-            'is_active' => true,
-        ]);
-
-        $otherReporter = User::create([
-            'name' => 'Other Field Officer',
-            'email' => 'other.field.officer@example.test',
-            'password' => 'Correct-Horse-Battery-42!',
-            'role' => 'field_officer',
-            'is_active' => true,
-        ]);
+        $farmerUser = $this->makeUser('farmer', $ownFarmer->id);
+        $otherReporter = $this->makeUser('field_officer');
 
         foreach ([[$ownFarm, 'CASE-OWN-0001', $farmerUser->id], [$otherFarm, 'CASE-OTHER-01', $otherReporter->id]] as [$farm, $caseCode, $reporterId]) {
             DiseaseCase::create([
@@ -108,10 +110,53 @@ class RoleAccessTest extends TestCase
             ]);
         }
 
-        $response = $this->actingAs($farmerUser)->get(route('cases.index'));
-
-        $response->assertOk()
+        $this->actingAs($farmerUser)->get(route('cases.index'))
+            ->assertOk()
             ->assertSee('CASE-OWN-0001')
             ->assertDontSee('CASE-OTHER-01');
+    }
+
+    public function test_laboratory_technician_can_open_results_but_not_field_investigations_or_reports(): void
+    {
+        $this->actingAs($this->makeUser('laboratory_technician'))
+            ->get(route('laboratory.index'))->assertOk();
+
+        $this->get(route('investigations.index'))->assertForbidden();
+        $this->get(route('reports.index'))->assertForbidden();
+        $this->get(route('users.index'))->assertForbidden();
+    }
+
+    public function test_laboratory_manager_can_review_results_but_cannot_submit_technician_results(): void
+    {
+        $this->actingAs($this->makeUser('laboratory_manager'))
+            ->get(route('laboratory.index'))->assertOk();
+
+        $this->get(route('laboratory.create'))->assertForbidden();
+        $this->get(route('users.index'))->assertForbidden();
+    }
+
+    public function test_mlf_officer_can_view_reports_but_cannot_manage_accounts_or_farm_registry(): void
+    {
+        $this->actingAs($this->makeUser('mlf_officer'))
+            ->get(route('reports.index'))->assertOk();
+
+        $this->get(route('users.index'))->assertForbidden();
+        $this->get(route('farms.index'))->assertForbidden();
+    }
+
+    public function test_zonal_laboratory_administrator_can_view_laboratory_registry_but_not_user_management(): void
+    {
+        $this->actingAs($this->makeUser('zonal_laboratory_administrator'))
+            ->get(route('laboratories.index'))->assertOk();
+
+        $this->get(route('users.index'))->assertForbidden();
+        $this->get(route('reports.index'))->assertForbidden();
+    }
+
+    public function test_only_system_administrator_can_access_user_management(): void
+    {
+        $this->actingAs($this->makeUser('system_admin'))
+            ->get(route('users.index'))
+            ->assertOk();
     }
 }
