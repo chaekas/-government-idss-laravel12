@@ -35,7 +35,14 @@ class SampleController extends Controller
         // Technicians work only on samples assigned to them. Field officers see
         // the samples they collected or samples belonging to cases they reported.
         if ($request->user()->role === 'laboratory_technician') {
-            $query->where('assigned_technician', $request->user()->id);
+            $query->where(function ($samples) use ($request) {
+                $samples->where('assigned_technician', $request->user()->id)
+                    ->orWhere('transport_status', 'in_transit')
+                    ->orWhere(function ($awaitingQuality) {
+                        $awaitingQuality->where('transport_status', 'received')
+                            ->where('quality_status', 'pending');
+                    });
+            });
         } elseif ($request->user()->role === 'field_officer') {
             $query->where(function ($samples) use ($request) {
                 $samples->where('collected_by', $request->user()->id)
