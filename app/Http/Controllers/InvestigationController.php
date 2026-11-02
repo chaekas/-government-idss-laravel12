@@ -8,6 +8,7 @@ use App\Models\Investigation;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class InvestigationController extends Controller
 {
@@ -57,7 +58,13 @@ class InvestigationController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
+        abort_unless(!in_array($investigation->status, ['closed', 'completed'], true), 422, 'Completed or closed investigations are locked. Create an authorized follow-up record if further action is required.');
         $investigation->update($data);
+        if ($data['status'] === 'sample_collected') {
+            $investigation->diseaseCase()->update(['status' => 'sample_collected']);
+        } elseif ($data['status'] === 'closed') {
+            $investigation->diseaseCase()->update(['status' => 'closed']);
+        }
         AuditLog::create(['user_id' => $request->user()->id, 'action' => 'investigation.updated', 'entity_type' => 'investigation', 'entity_id' => (string) $investigation->id, 'ip_address' => $request->ip(), 'description' => 'Updated investigation '.$investigation->investigation_code, 'created_at' => now()]);
         return redirect()->route('investigations.index')->with('status', 'Investigation updated.');
     }
