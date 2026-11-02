@@ -21,7 +21,7 @@ class Farmer extends Model
 
     public function farms(): BelongsToMany
     {
-        return $this->belongsToMany(Farm::class)->withPivot(['ownership_type', 'ownership_share', 'effective_from', 'effective_to', 'is_primary'])->withTimestamps();
+        return $this->belongsToMany(Farm::class, 'farmer_farm')->withPivot(['ownership_type', 'ownership_share', 'effective_from', 'effective_to', 'is_primary'])->withTimestamps();
     }
 
     public function contacts(): HasMany { return $this->hasMany(FarmerContact::class); }
