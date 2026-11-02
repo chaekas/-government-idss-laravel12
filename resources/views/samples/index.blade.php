@@ -36,7 +36,7 @@
                         <b>{{ $sample->sample_type }}</b><br>
                         {{ $sample->laboratory?->name ?: 'No destination lab' }}<br>
                         @if($sample->laboratory_reference_number)<small>Lab ref: {{ $sample->laboratory_reference_number }}</small><br>@endif
-                        <small>Received: {{ $sample->received_at?->format('d M Y H:i') ?: 'Pending' }}</small>
+                        <small>Packaged: {{ $sample->packaged_at?->format('d M Y H:i') ?: 'Pending' }}</small><br><small>Received: {{ $sample->received_at?->format('d M Y H:i') ?: 'Pending' }}</small>
                     </td>
                     <td>
                         <b>Transport:</b> {{ str_replace('_',' ',ucfirst($sample->transport_status)) }}<br>
@@ -63,14 +63,25 @@
                         @endforelse
                     </td>
                     <td style="min-width:260px">
-                        @if(in_array($role, ['field_officer','regional_veterinary_officer', ...$adminRoles], true) && $sample->transport_status === 'not_dispatched')
-                            <details><summary>Package & dispatch</summary>
+                        @if(in_array($role, ['field_officer','regional_veterinary_officer', ...$adminRoles], true) && $sample->transport_status === 'not_dispatched' && !$sample->packaged_at)
+                            <details><summary>Package sample</summary>
+                                <form method="POST" action="{{ route('samples.update',$sample) }}" style="min-width:220px;padding:8px">
+                                    @csrf @method('PUT')
+                                    <input type="hidden" name="event_type" value="packaged">
+                                    <label>Packaging / seal / storage condition *</label><input name="condition_on_transfer" required placeholder="e.g. sealed leak-proof container, chilled">
+                                    <label>Packaging notes</label><textarea name="notes" rows="2"></textarea>
+                                    <div class="actions"><button class="button primary">Confirm packaging</button></div>
+                                </form>
+                            </details>
+                        @endif
+
+                        @if(in_array($role, ['field_officer','regional_veterinary_officer', ...$adminRoles], true) && $sample->transport_status === 'not_dispatched' && $sample->packaged_at)
+                            <details><summary>Dispatch to laboratory</summary>
                                 <form method="POST" action="{{ route('samples.update',$sample) }}" style="min-width:220px;padding:8px">
                                     @csrf @method('PUT')
                                     <input type="hidden" name="event_type" value="dispatched">
-                                    <label>From</label><input value="Field collection" disabled>
-                                    <label>To</label><input name="to_location" value="{{ $sample->laboratory?->name }}" required>
-                                    <label>Packaging / transport condition</label><input name="condition_on_transfer" required>
+                                    <label>Destination laboratory</label><input name="to_location" value="{{ $sample->laboratory?->name }}" required>
+                                    <label>Transport condition *</label><input name="condition_on_transfer" required>
                                     <label>Dispatch notes</label><textarea name="notes" rows="2"></textarea>
                                     <div class="actions"><button class="button primary">Confirm dispatch</button></div>
                                 </form>
@@ -104,6 +115,15 @@
                                     <div class="actions"><button class="button primary">Record QC decision</button></div>
                                 </form>
                             </details>
+                        @endif
+
+                        @if($role === 'laboratory_technician' && (int) $sample->assigned_technician === (int) auth()->id() && $sample->transport_status === 'received' && $sample->quality_status === 'accepted' && $sample->test_status === 'pending')
+                            <form method="POST" action="{{ route('samples.update',$sample) }}" style="margin:8px 0">
+                                @csrf @method('PUT')
+                                <input type="hidden" name="event_type" value="testing_started">
+                                <input type="hidden" name="notes" value="Assigned technician started examination.">
+                                <button class="button primary">Start examination</button>
+                            </form>
                         @endif
 
                         @if($canAssign && $sample->transport_status === 'received' && $sample->quality_status === 'accepted' && $sample->test_status !== 'approved')
