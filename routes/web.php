@@ -11,6 +11,7 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\FarmerController;
 use App\Http\Controllers\InvestigationController;
 use App\Http\Controllers\LaboratoryController;
+use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\LaboratoryResultController;
 use App\Http\Controllers\OutbreakController;
 use App\Http\Controllers\NotificationController;
