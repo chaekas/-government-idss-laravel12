@@ -11,7 +11,7 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'is_active'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'is_active', 'farmer_id'];
     protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
@@ -21,6 +21,11 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function farmer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Farmer::class);
     }
 
     public function notifications(): HasMany
