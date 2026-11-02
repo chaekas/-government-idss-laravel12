@@ -160,6 +160,36 @@ class RoleAccessTest extends TestCase
             ->assertOk();
     }
 
+    public function test_staff_account_does_not_require_or_retain_a_farmer_link(): void
+    {
+        $farmerRecord = Farmer::create([
+            'farmer_code' => 'FRM-STAFF-LINK-01',
+            'full_name' => 'Existing Farmer',
+            'region' => 'Dodoma',
+            'district' => 'Kondoa',
+        ]);
+        $this->makeUser('farmer', $farmerRecord->id);
+        $admin = $this->makeUser('system_admin');
+
+        $this->actingAs($admin)->post(route('users.store'), [
+            'name' => 'Laboratory Technician',
+            'email' => 'lab-tech-unique@example.test',
+            'role' => 'laboratory_technician',
+            // Even if a stale/hidden form submits an already-used farmer ID,
+            // it must be ignored for staff roles.
+            'farmer_id' => $farmerRecord->id,
+            'password' => 'Strong-Staff-Password-2026',
+            'password_confirmation' => 'Strong-Staff-Password-2026',
+        ])->assertRedirect(route('users.index'))
+          ->assertSessionHas('status', 'User created successfully.');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'lab-tech-unique@example.test',
+            'role' => 'laboratory_technician',
+            'farmer_id' => null,
+        ]);
+    }
+
     public function test_existing_super_admin_role_can_access_user_management_and_sees_sidebar_link(): void
     {
         $this->actingAs($this->makeUser('super_admin'))
