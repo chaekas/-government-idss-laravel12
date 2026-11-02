@@ -27,7 +27,7 @@ class DashboardController extends Controller
                 'farmCount' => $farmerId ? Farm::where('farmer_id', $farmerId)->count() : 0,
                 'animalCount' => Animal::whereIn('farm_id', $farmIds)->count(),
                 'caseCount' => DiseaseCase::whereIn('farm_id', $farmIds)->count(),
-                'openCaseCount' => DiseaseCase::whereIn('farm_id', $farmIds)->whereIn('status', ['reported', 'under_investigation'])->count(),
+                'openCaseCount' => DiseaseCase::whereIn('farm_id', $farmIds)->whereIn('status', ['reported', 'under_investigation', 'sample_collected', 'laboratory_testing'])->count(),
                 'investigationCount' => Investigation::whereIn('status', ['pending', 'under_investigation', 'sample_collected'])->whereIn('disease_case_id', $caseIds)->count(),
                 'sampleCount' => Sample::whereIn('disease_case_id', $caseIds)->count(),
                 'pendingSampleCount' => Sample::whereIn('disease_case_id', $caseIds)->whereIn('test_status', ['pending', 'in_progress', 'completed'])->count(),
