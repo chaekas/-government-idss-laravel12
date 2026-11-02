@@ -41,7 +41,7 @@ class UserController extends Controller
         $user = User::create($data);
         $this->audit($request, 'user.created', $user, 'Created staff account '.$user->email.' with role '.$user->role);
 
-        return redirect()->route('users.index')->with('status', 'Staff account created successfully.');
+        return redirect()->route('users.index')->with('status', 'User created successfully.');
     }
 
     public function update(Request $request, User $user)
