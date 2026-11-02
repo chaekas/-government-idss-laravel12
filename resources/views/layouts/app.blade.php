@@ -67,7 +67,7 @@
     <main class="main">
         <header class="topbar">
             <div><small>MINISTRY OF LIVESTOCK AND FISHERIES</small><strong>Integrated Disease Surveillance System</strong></div>
-            <div class="account"><span class="avatar">{{ strtoupper(substr(auth()->user()->name,0,1)) }}</span><span><b>{{ auth()->user()->name }}</b><small>{{ config('idss.roles.'.$role.'.label', str_replace('_',' ',ucfirst($role))) }}</small></span><form method="POST" action="{{ route('logout') }}">@csrf<button class="logout">Sign out</button></form></div>
+            <div class="account"><span class="avatar">{{ strtoupper(substr(auth()->user()->name,0,1)) }}</span><span><b>{{ auth()->user()->name }}</b><small>{{ config('idss.roles.'.$role.'.label', in_array($role, config('idss.administrator_aliases', []), true) ? 'System Administrator' : str_replace('_',' ',ucfirst($role))) }}</small></span><form method="POST" action="{{ route('logout') }}">@csrf<button class="logout">Sign out</button></form></div>
         </header>
         <section class="content">
             @if(session('status'))<div class="alert success">{{ session('status') }}</div>@endif
