@@ -22,8 +22,8 @@ Integrated Disease Surveillance System (IDSS) for the Ministry of Livestock and 
 - Laboratory facility registration and laboratory test result entry for received, quality-accepted samples.
 - Laboratory result review/approval restricted to laboratory managers and system administrators.
 - Outbreak register with disease, location, case/death counts, severity, coordinates, and response notes.
-- Administrator-only user management: create accounts, assign roles, update profiles, deactivate accounts, and reset passwords.
-- Audit entries for user administration, animal registration, investigations, sample movements, laboratory results, and outbreak creation.
+- Administrator-only user management: create accounts, assign roles, link farmer accounts to their registered farmer record, update profiles, deactivate accounts, and reset passwords.
+- Audit entries for disease case reporting, user administration, animal registration, investigations, sample movements, laboratory results, and outbreak creation.\n- Role-gated reporting dashboard with date-filtered CSV exports for disease cases and sample tracking.\n- Authenticated GIS map for farms, cases with georeferenced farms, and outbreak records where coordinates have been entered.\n- Farmer accounts are scoped to their linked farm(s) for case listing, reporting, and dashboard counts; staff-only modules are protected by role middleware.\n- Laboratory results cannot be approved by the same account that performed the test.
 - Automated test configuration and feature tests.
 
 ### Important workflow rules
@@ -98,11 +98,11 @@ Tests use an in-memory SQLite database configured in `phpunit.xml.dist`, so they
 ## Known remaining work before production
 
 This repository is an operational development foundation, not a certified production deployment. The following SRS capabilities still require implementation and/or stakeholder verification:
-- Full role/permission matrix and administrative/geographic record-level scoping for every module.
+- Complete role/permission matrix and administrative/geographic record-level scoping for all staff modules; farmer-to-farm case access is scoped, but wider regional/district scoping still needs Ministry policy definitions.
 - Formal disease investigation sign-off and richer case lifecycle/status transitions.
 - Diagnostic test master catalogue, sample quality control inspections, equipment calibration, corrective actions, and immutable approved-result records.
 - Real notification delivery through an approved SMS/email gateway; in-app notifications exist, but external SMS/email delivery is not configured.
-- PDF/Excel report generation, scheduled reporting, and complete executive/laboratory performance analytics.
+- PDF/XLSX generation, scheduled reporting, and complete executive/laboratory performance analytics. Current exports are CSV files that can be opened in spreadsheet software.
 - Interactive GIS maps, hotspot analysis, and map filtering.
 - UTAMBUZI integration, which cannot be activated until the Ministry provides the official API specification, authorized credentials, and test environment.
 - Password reset delivery, account lockout policy, configurable idle timeout, and additional security review.
