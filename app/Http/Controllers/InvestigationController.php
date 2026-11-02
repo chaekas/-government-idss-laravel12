@@ -32,7 +32,7 @@ class InvestigationController extends Controller
             'assigned_to' => ['nullable', Rule::exists('users', 'id')->where(fn ($query) => $query->whereIn('role', ['field_officer', 'regional_veterinary_officer', 'system_admin', 'administrator', 'admin']))],
             'field_observations' => ['required', 'string', 'max:5000'],
             'epidemiological_findings' => ['nullable', 'string', 'max:5000'],
-            'recommended_actions' => ['nullable', 'string', 'max:5000'],
+            'recommended_actions' => ['nullable', 'required_if:status,closed', 'string', 'max:5000'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
@@ -54,7 +54,7 @@ class InvestigationController extends Controller
             'status' => ['required', 'in:under_investigation,sample_collected,completed,closed'],
             'field_observations' => ['required', 'string', 'max:5000'],
             'epidemiological_findings' => ['nullable', 'string', 'max:5000'],
-            'recommended_actions' => ['nullable', 'string', 'max:5000'],
+            'recommended_actions' => ['nullable', 'required_if:status,closed', 'string', 'max:5000'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
