@@ -1,19 +1,38 @@
 <?php
-use App\\Http\\Controllers\\AuthController;
-use App\\Http\\Controllers\\DashboardController;
-use App\\Http\\Controllers\\DiseaseCaseController;
-use App\\Http\\Controllers\\FarmController;
-use App\\Http\\Controllers\\FarmerController;
-use Illuminate\\Support\\Facades\\Route;
-Route::get('/',fn()=>redirect()->route('dashboard'));
-Route::middleware('guest')->group(function(){
- Route::get('/login',[AuthController::class,'create'])->name('login');
- Route::post('/login',[AuthController::class,'store'])->middleware('throttle:5,1')->name('login.store');
+
+use App\Http\Controllers\AnimalController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DiseaseCaseController;
+use App\Http\Controllers\FarmController;
+use App\Http\Controllers\FarmerController;
+use App\Http\Controllers\InvestigationController;
+use App\Http\Controllers\LaboratoryResultController;
+use App\Http\Controllers\OutbreakController;
+use App\Http\Controllers\SampleController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', fn () => redirect()->route('dashboard'));
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'create'])->name('login');
+    Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:5,1')->name('login.store');
 });
-Route::middleware('auth')->group(function(){
- Route::post('/logout',[AuthController::class,'destroy'])->name('logout');
- Route::get('/dashboard',DashboardController::class)->name('dashboard');
- Route::resource('farmers',FarmerController::class)->only(['index','create','store']);
- Route::resource('farms',FarmController::class)->only(['index','create','store']);
- Route::resource('cases',DiseaseCaseController::class)->only(['index','create','store']);
+
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::resource('farmers', FarmerController::class)->only(['index', 'create', 'store']);
+    Route::resource('farms', FarmController::class)->only(['index', 'create', 'store']);
+    Route::resource('cases', DiseaseCaseController::class)->only(['index', 'create', 'store']);
+    Route::resource('animals', AnimalController::class)->only(['index', 'create', 'store']);
+    Route::get('/investigations', [InvestigationController::class, 'index'])->name('investigations.index');
+    Route::get('/investigations/create', [InvestigationController::class, 'create'])->name('investigations.create');
+    Route::post('/investigations', [InvestigationController::class, 'store'])->name('investigations.store');
+    Route::put('/investigations/{investigation}', [InvestigationController::class, 'update'])->name('investigations.update');
+    Route::resource('samples', SampleController::class)->only(['index', 'create', 'store', 'update']);
+    Route::get('/laboratory', [LaboratoryResultController::class, 'index'])->name('laboratory.index');
+    Route::get('/laboratory/create', [LaboratoryResultController::class, 'create'])->name('laboratory.create');
+    Route::post('/laboratory', [LaboratoryResultController::class, 'store'])->name('laboratory.store');
+    Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
+    Route::resource('outbreaks', OutbreakController::class)->only(['index', 'create', 'store']);
 });
