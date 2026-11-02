@@ -34,7 +34,7 @@ Integrated Disease Surveillance System (IDSS) for the Ministry of Livestock and 
 - A sample must be received and quality-accepted before it appears in the laboratory test entry form.
 - A rejected sample requires a reason and must not proceed to the laboratory testing form.
 - Laboratory results are submitted for review; only a laboratory manager or system administrator can approve or reject them.
-- User administration is restricted to system administrators/authorized administrator roles.
+- Only the system administrator role can create, edit, deactivate, or assign user accounts.
 - Generated IDs are operational identifiers; they do not replace official national identifiers or UTAMBUZI identifiers.
 
 ## Run in GitHub Codespaces
@@ -98,6 +98,23 @@ php artisan migrate:status
 ```
 
 Tests use an in-memory SQLite database configured in `phpunit.xml.dist`, so they should not overwrite the local development database.
+
+## Role-based access and account creation
+
+The application uses server-side role middleware; hiding a menu item is not treated as authorization.
+
+| Role | Permitted workspace activities |
+|---|---|
+| Farmer / livestock owner | Self-register; access own farmer dashboard and notification inbox; report cases only against farms linked to their farmer record; view cases linked to their own farms. A field officer must register/link the farm before case reporting is available. |
+| Poultry Field Officer (LFO) | Register farmers, farms and animals; investigate cases; collect/register samples; update field case information; record suspected outbreak reports. |
+| Laboratory Technician | View sample custody and laboratory records; record test results for received, quality-accepted samples; cannot approve/reject their own result or perform the manager's approval step. |
+| Laboratory Manager | Review and approve/reject submitted laboratory results, subject to independent-review checks; view laboratory and sample workflows. |
+| Regional Veterinary Officer | Access regional surveillance workflows, case investigations, outbreak records, reports and GIS. Geographic filtering by assigned region is still a production-hardening requirement. |
+| Zonal Laboratory Administrator | View the laboratory registry and laboratory/sample workflows for zonal oversight. Geographic/laboratory-level record scoping still requires assignment data and Ministry policy. |
+| MLF Officer | View national surveillance reports, GIS, cases, outbreak records, notifications, samples and laboratory results for oversight. |
+| System Administrator | Create/deactivate accounts, assign roles, manage access, review audit records and access authorized administrative workflows. The last active system administrator cannot be demoted or disabled. |
+
+**Registration rule:** The public `/register` route creates a farmer account only. Any submitted `role` value is ignored; the server assigns the `farmer` role and links the account to a new farmer record. Field, laboratory, Ministry and system-administrator accounts must be created by an authenticated system administrator. Public registration is rate-limited and validates unique email and password complexity.
 
 ## Known remaining work before production
 
