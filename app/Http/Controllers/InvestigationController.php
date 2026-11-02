@@ -28,7 +28,7 @@ class InvestigationController extends Controller
     {
         $data = $request->validate([
             'disease_case_id' => ['required', 'exists:disease_cases,id', 'unique:investigations,disease_case_id'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
+            'assigned_to' => ['nullable', Rule::exists('users', 'id')->where(fn ($query) => $query->whereIn('role', ['field_officer', 'regional_veterinary_officer', 'system_admin', 'administrator', 'admin']))],
             'field_observations' => ['required', 'string', 'max:5000'],
             'epidemiological_findings' => ['nullable', 'string', 'max:5000'],
             'recommended_actions' => ['nullable', 'string', 'max:5000'],
