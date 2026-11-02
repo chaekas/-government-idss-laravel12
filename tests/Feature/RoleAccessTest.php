@@ -159,6 +159,23 @@ class RoleAccessTest extends TestCase
             ->get(route('users.index'))
             ->assertOk();
     }
+
+    public function test_existing_super_admin_role_can_access_user_management_and_sees_sidebar_link(): void
+    {
+        $this->actingAs($this->makeUser('super_admin'))
+            ->get(route('users.index'))
+            ->assertOk()
+            ->assertSee('User management')
+            ->assertSee('Create user');
+    }
+
+    public function test_legacy_admin_role_can_access_user_management(): void
+    {
+        $this->actingAs($this->makeUser('admin'))
+            ->get(route('users.index'))
+            ->assertOk()
+            ->assertSee('User management');
+    }
     public function test_system_administrator_cannot_demote_or_deactivate_themselves(): void
     {
         $admin = $this->makeUser('system_admin');
