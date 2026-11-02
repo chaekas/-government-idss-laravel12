@@ -12,7 +12,7 @@ class Farm extends Model
     protected $fillable = [
         'farm_code', 'farmer_id', 'name', 'region', 'district', 'ward', 'village',
         'latitude', 'longitude', 'poultry_type', 'bird_count', 'notes', 'farm_type_id',
-        'farm_size', 'farm_size_unit', 'administrative_area_id', 'status', 'archived_at',
+        'administrative_area_id', 'status', 'archived_at',
     ];
 
     protected function casts(): array
