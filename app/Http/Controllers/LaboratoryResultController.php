@@ -8,6 +8,7 @@ use App\Models\LaboratoryTestResult;
 use App\Models\Sample;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class LaboratoryResultController extends Controller
 {
