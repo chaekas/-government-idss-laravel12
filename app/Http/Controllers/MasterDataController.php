@@ -62,7 +62,8 @@ class MasterDataController extends Controller
     {
         $definition = $this->definition($type);
         $data = $this->validatedData($request, $type);
-        $definition['model']::create($data);
+        $modelClass = $definition['model'];
+        $modelClass::create($data);
         return redirect()->route('master-data.index', $type)->with('status', $definition['title'].' record created.');
     }
 
@@ -107,7 +108,7 @@ class MasterDataController extends Controller
 
         $data = $request->validate($rules);
         if ($type === 'breeds') {
-            $exists = Breed::where('species_id', $data['species_id'])->where('code', $data['code'])->when($ignoreId, fn ($q) => $q->whereKeyNot($ignoreId))->exists();
+            $exists = Breed::where('species_id', $data['species_id'])->where('code', $data['code'])->when($ignoreId, fn ($q) => $q->where('id', '<>', $ignoreId))->exists();
             abort_if($exists, 422, 'The breed code already exists for this species.');
         }
         return $data;
