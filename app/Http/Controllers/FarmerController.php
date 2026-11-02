@@ -49,9 +49,26 @@ class FarmerController extends Controller
             'village' => ['nullable', 'string', 'max:100'],
             'address' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'in:active,inactive,deceased,suspended'],
+            'duplicate_verification_confirmed' => ['sometimes', 'boolean'],
         ]);
 
+        $potentialDuplicate = Farmer::whereRaw('LOWER(full_name) = ?', [mb_strtolower($data['full_name'])])
+            ->where('phone', $data['phone'])
+            ->first();
+        $duplicateVerified = (bool) ($data['duplicate_verification_confirmed'] ?? false);
+        if ($potentialDuplicate && !$duplicateVerified) {
+            throw ValidationException::withMessages([
+                'phone' => 'A farmer with the same name and mobile number already exists ('.$potentialDuplicate->farmer_code.'). Verify the identity before continuing.',
+            ]);
+        }
+
+        unset($data['duplicate_verification_confirmed']);
         $data['farmer_code'] = 'FRM-'.now()->format('Y').'-'.Str::upper(Str::random(6));
+        $data['created_by'] = $request->user()->id;
+        if ($duplicateVerified) {
+            $data['duplicate_verified_at'] = now();
+            $data['duplicate_verified_by'] = $request->user()->id;
+        }
         $farmer = Farmer::create($data);
 
         AuditLog::create([
@@ -61,6 +78,7 @@ class FarmerController extends Controller
             'entity_id' => (string) $farmer->id,
             'ip_address' => $request->ip(),
             'description' => 'Registered farmer '.$farmer->farmer_code,
+            'metadata' => $duplicateVerified ? ['duplicate_verification' => 'confirmed'] : null,
             'created_at' => now(),
         ]);
 
