@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Outbreak extends Model
 {
@@ -14,5 +15,6 @@ class Outbreak extends Model
     public function diseaseCategory(): BelongsTo { return $this->belongsTo(DiseaseCategory::class); }
     public function administrativeArea(): BelongsTo { return $this->belongsTo(AdministrativeArea::class); }
     public function reporter(): BelongsTo { return $this->belongsTo(User::class, 'reported_by'); }
+    public function statusHistory(): HasMany { return $this->hasMany(OutbreakStatusHistory::class)->orderBy('changed_at'); }
     public function diseaseCases(): BelongsToMany { return $this->belongsToMany(DiseaseCase::class, 'outbreak_case', 'outbreak_id', 'disease_case_id')->withTimestamps(); }
 }
