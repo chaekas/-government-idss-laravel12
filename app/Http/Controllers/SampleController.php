@@ -7,6 +7,8 @@ use App\Models\DiseaseCase;
 use App\Models\Laboratory;
 use App\Models\Sample;
 use App\Models\SampleMovement;
+use App\Models\User;
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -62,6 +64,11 @@ class SampleController extends Controller
             'received_at' => $data['event_type'] === 'received' ? now() : $sample->received_at,
         ]);
         SampleMovement::create(['sample_id' => $sample->id, 'event_type' => $data['event_type'], 'to_location' => $data['to_location'] ?? null, 'received_by' => $data['received_by'] ?? null, 'condition_on_transfer' => $data['condition_on_transfer'] ?? null, 'notes' => $data['notes'] ?? null, 'recorded_by' => $request->user()->id, 'event_at' => now()]);
+        if (in_array($data['event_type'], ['received', 'accepted'], true)) {
+            User::where('is_active', true)->whereIn('role', ['laboratory_technician', 'laboratory_manager'])->get()->each(function (User $recipient) use ($sample) {
+                UserNotification::create(['user_id' => $recipient->id, 'title' => 'Sample received / quality updated', 'message' => $sample->sample_code.' has a new custody event. Check sample quality and the laboratory queue.', 'category' => 'laboratory']);
+            });
+        }
         AuditLog::create(['user_id' => $request->user()->id, 'action' => 'sample.movement_recorded', 'entity_type' => 'sample', 'entity_id' => (string) $sample->id, 'ip_address' => $request->ip(), 'description' => 'Sample '.$sample->sample_code.': '.$data['event_type'], 'created_at' => now()]);
         return redirect()->route('samples.index')->with('status', 'Sample custody and status updated.');
     }
