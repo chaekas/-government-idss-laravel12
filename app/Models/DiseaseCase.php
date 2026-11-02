@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class DiseaseCase extends Model
 {
-    protected $fillable = ['case_code', 'farm_id', 'reported_by', 'disease_suspected', 'date_observed', 'symptoms', 'birds_affected', 'birds_dead', 'severity', 'status', 'investigation_notes'];
+    protected $fillable = ['case_code', 'farm_id', 'animal_id', 'disease_category_id', 'administrative_area_id', 'reported_by', 'disease_suspected', 'date_observed', 'symptoms', 'birds_affected', 'birds_dead', 'severity', 'status', 'investigation_notes'];
 
     protected function casts(): array { return ['date_observed' => 'date']; }
     public function farm(): BelongsTo { return $this->belongsTo(Farm::class); }
@@ -19,5 +19,5 @@ class DiseaseCase extends Model
     public function samples(): HasMany { return $this->hasMany(Sample::class); }
     public function animal(): BelongsTo { return $this->belongsTo(Animal::class); }
     public function diseaseCategory(): BelongsTo { return $this->belongsTo(DiseaseCategory::class); }
-    public function symptoms(): BelongsToMany { return $this->belongsToMany(DiseaseSymptom::class)->withTimestamps(); }
+    public function symptoms(): BelongsToMany { return $this->belongsToMany(DiseaseSymptom::class, 'disease_case_symptom', 'disease_case_id', 'disease_symptom_id')->withTimestamps(); }
 }
