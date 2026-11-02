@@ -226,6 +226,12 @@ return new class extends Migration
             $table->text('description')->nullable(); $table->boolean('is_active')->default(true);
             $table->timestamps(); $table->softDeletes();
         });
+        Schema::table('samples', function (Blueprint $table) {
+            if (!Schema::hasColumn('samples', 'sample_type_id')) {
+                $table->foreignId('sample_type_id')->nullable()->constrained('sample_types')->nullOnDelete();
+            }
+        });
+
         Schema::create('sample_transportations', function (Blueprint $table) {
             $table->id(); $table->foreignId('sample_id')->constrained()->restrictOnDelete();
             $table->string('consignment_reference', 120)->nullable(); $table->string('courier_name', 160)->nullable();
