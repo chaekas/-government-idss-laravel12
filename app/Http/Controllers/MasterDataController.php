@@ -12,6 +12,7 @@ use App\Models\LaboratoryTest;
 use App\Models\SampleType;
 use App\Models\Species;
 use App\Models\TestMethod;
+use App\Models\SurveillanceAlertRule;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -20,6 +21,7 @@ class MasterDataController extends Controller
     private function definitions(): array
     {
         return [
+            'surveillance-alert-rules' => ['title' => 'Surveillance alert rules', 'model' => SurveillanceAlertRule::class, 'fields' => ['code','name','severity','case_threshold','within_hours','notify_field_officers','notify_regional_officers','notify_ministry_officers','is_active']],
             'farm-types' => ['title' => 'Farm types', 'model' => FarmType::class, 'fields' => ['code','name','description','sort_order','is_active']],
             'species' => ['title' => 'Species', 'model' => Species::class, 'fields' => ['code','name','description','is_active']],
             'breeds' => ['title' => 'Breeds', 'model' => Breed::class, 'fields' => ['species_id','code','name','description','is_active']],
@@ -124,6 +126,7 @@ class MasterDataController extends Controller
     {
         $unique = fn (string $table, string $column = 'code') => Rule::unique($table, $column)->ignore($ignoreId);
         $rules = match ($type) {
+            'surveillance-alert-rules' => ['code' => ['required','string','max:80',$unique('surveillance_alert_rules')], 'name' => ['required','string','max:160'], 'severity' => ['required',Rule::in(['low','medium','high','critical'])], 'case_threshold' => ['required','integer','min:1','max:100000'], 'within_hours' => ['required','integer','min:1','max:8760'], 'notify_field_officers' => ['required','boolean'], 'notify_regional_officers' => ['required','boolean'], 'notify_ministry_officers' => ['required','boolean'], 'is_active' => ['required','boolean']],
             'farm-types' => ['code' => ['required','string','max:80',$unique('farm_types')], 'name' => ['required','string','max:120',$unique('farm_types','name')], 'description' => ['nullable','string','max:2000'], 'sort_order' => ['nullable','integer','min:0'], 'is_active' => ['required','boolean']],
             'species' => ['code' => ['required','string','max:80',$unique('species')], 'name' => ['required','string','max:120',$unique('species','name')], 'description' => ['nullable','string','max:2000'], 'is_active' => ['required','boolean']],
             'breeds' => ['species_id' => ['required','exists:species,id'], 'code' => ['required','string','max:80'], 'name' => ['required','string','max:120'], 'description' => ['nullable','string','max:2000'], 'is_active' => ['required','boolean']],
