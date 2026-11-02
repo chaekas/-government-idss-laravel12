@@ -9,11 +9,33 @@ use App\Models\Farmer;
 use App\Models\Investigation;
 use App\Models\Outbreak;
 use App\Models\Sample;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function __invoke()
+    public function __invoke(Request $request)
     {
+        $user = $request->user();
+
+        if ($user->role === 'farmer') {
+            $farmerId = $user->farmer_id;
+            $farmIds = $farmerId ? Farm::where('farmer_id', $farmerId)->select('id') : Farm::whereRaw('1 = 0')->select('id');
+            $caseIds = DiseaseCase::whereIn('farm_id', $farmIds)->select('id');
+
+            return view('dashboard', [
+                'farmerCount' => $farmerId ? 1 : 0,
+                'farmCount' => $farmerId ? Farm::where('farmer_id', $farmerId)->count() : 0,
+                'animalCount' => Animal::whereIn('farm_id', $farmIds)->count(),
+                'caseCount' => DiseaseCase::whereIn('farm_id', $farmIds)->count(),
+                'openCaseCount' => DiseaseCase::whereIn('farm_id', $farmIds)->whereIn('status', ['reported', 'under_investigation'])->count(),
+                'investigationCount' => Investigation::whereIn('status', ['pending', 'under_investigation', 'sample_collected'])->whereIn('disease_case_id', $caseIds)->count(),
+                'sampleCount' => Sample::whereIn('disease_case_id', $caseIds)->count(),
+                'pendingSampleCount' => Sample::whereIn('disease_case_id', $caseIds)->whereIn('test_status', ['pending', 'in_progress', 'completed'])->count(),
+                'outbreakCount' => 0,
+                'recentCases' => DiseaseCase::with('farm')->whereIn('farm_id', $farmIds)->latest()->take(8)->get(),
+            ]);
+        }
+
         return view('dashboard', [
             'farmerCount' => Farmer::count(),
             'farmCount' => Farm::count(),
