@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Outbreak;
+use App\Models\User;
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -37,6 +39,9 @@ class OutbreakController extends Controller
         $data['reported_by'] = $request->user()->id;
         $data['status'] = 'suspected';
         $outbreak = Outbreak::create($data);
+        User::where('is_active', true)->whereIn('role', ['field_officer', 'regional_veterinary_officer', 'mlf_officer', 'system_admin'])->get()->each(function (User $recipient) use ($outbreak) {
+            UserNotification::create(['user_id' => $recipient->id, 'title' => 'Suspected disease outbreak recorded', 'message' => $outbreak->outbreak_code.' — '.$outbreak->disease_name.' in '.$outbreak->district.', '.$outbreak->region.'. Verify through the official investigation workflow.', 'category' => 'outbreak']);
+        });
         AuditLog::create(['user_id' => $request->user()->id, 'action' => 'outbreak.created', 'entity_type' => 'outbreak', 'entity_id' => (string) $outbreak->id, 'ip_address' => $request->ip(), 'description' => 'Recorded outbreak '.$outbreak->outbreak_code, 'created_at' => now()]);
         return redirect()->route('outbreaks.index')->with('status', 'Outbreak record created. Confirm details through the investigation workflow.');
     }
