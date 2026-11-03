@@ -38,7 +38,7 @@ Route::get('/health/idss', function () {
             'service' => 'government-idss',
             'checks' => ['database' => 'ok'],
         ]);
-    } catch (\\Throwable $exception) {
+    } catch (\Throwable $exception) {
         Log::warning('IDSS readiness check failed.', [
             'exception' => get_class($exception),
         ]);
