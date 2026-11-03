@@ -56,7 +56,7 @@ class LaboratoryManagementTest extends TestCase
         ])->assertRedirect();
 
         $equipment = LaboratoryEquipment::where('equipment_code', 'PCR-UNIT-01')->firstOrFail();
-        $this->put(route('laboratory.equipment.calibrations.store', $equipment), [
+        $this->post(route('laboratory.equipment.calibrations.store', $equipment), [
             'calibration_date' => now()->toDateString(),
             'due_date' => now()->addMonths(6)->toDateString(),
             'outcome' => 'failed',
