@@ -1,6 +1,17 @@
 <?php
 
 return [
+    'security' => [
+        'hsts_enabled' => env('IDSS_HSTS_ENABLED', env('APP_ENV') === 'production'),
+    ],
+
+    'backups' => [
+        'path' => env('IDSS_BACKUP_PATH', storage_path('app/private/backups')),
+        'keep_days' => (int) env('IDSS_BACKUP_KEEP_DAYS', 30),
+        'pg_dump_binary' => env('IDSS_PG_DUMP_BINARY', 'pg_dump'),
+        'pg_restore_binary' => env('IDSS_PG_RESTORE_BINARY', 'pg_restore'),
+    ],
+
     'administrator_aliases' => ['super_admin', 'super-admin', 'administrator', 'admin'],
 
     'roles' => [
