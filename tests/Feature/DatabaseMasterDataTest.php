@@ -241,6 +241,7 @@ class DatabaseMasterDataTest extends TestCase
 
     public function test_staff_account_can_be_assigned_to_organization_department_and_office(): void
     {
+        $this->seed();
         $admin = $this->user('system_admin');
         $organization = Organization::create(['code' => 'ORG-STAFF', 'name' => 'Staff Organization', 'is_active' => true]);
         $department = Department::create(['organization_id' => $organization->id, 'code' => 'DEPT-STAFF', 'name' => 'Staff Department', 'is_active' => true]);
