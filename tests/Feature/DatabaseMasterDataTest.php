@@ -270,4 +270,37 @@ class DatabaseMasterDataTest extends TestCase
     }
 
 
+
+    public function test_farmer_registration_writes_normalized_contact_and_address_records(): void
+    {
+        $officer = $this->user('field_officer');
+        $this->actingAs($officer)->post(route('farmers.store'), [
+            'full_name' => 'Normalized Farmer',
+            'phone' => '0712345678',
+            'email' => 'normalized-farmer@example.test',
+            'region' => 'Dodoma',
+            'district' => 'Kondoa',
+            'ward' => 'Kikilo',
+            'village' => 'Mlimani',
+            'address' => 'Farm road',
+            'status' => 'active',
+        ])->assertRedirect(route('farmers.index'));
+
+        $farmer = Farmer::where('full_name', 'Normalized Farmer')->firstOrFail();
+        $this->assertDatabaseHas('farmer_contacts', [
+            'farmer_id' => $farmer->id, 'contact_type' => 'phone',
+            'contact_value' => '0712345678', 'is_primary' => 1,
+        ]);
+        $this->assertDatabaseHas('farmer_contacts', [
+            'farmer_id' => $farmer->id, 'contact_type' => 'email',
+            'contact_value' => 'normalized-farmer@example.test', 'is_primary' => 1,
+        ]);
+        $this->assertDatabaseHas('farmer_addresses', [
+            'farmer_id' => $farmer->id, 'region' => 'Dodoma',
+            'district' => 'Kondoa', 'ward' => 'Kikilo', 'village' => 'Mlimani',
+            'is_primary' => 1,
+        ]);
+    }
+
+
 }
