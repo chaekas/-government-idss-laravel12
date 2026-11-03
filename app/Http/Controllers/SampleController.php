@@ -141,17 +141,7 @@ class SampleController extends Controller
             }
         } elseif ($event === 'testing_started') {
             abort_unless($isAdmin || $role === 'laboratory_technician', 403);
-            $technicianAssignedToLab = DB::table('laboratory_user')
-            ->where('laboratory_id', $sample->laboratory_id)
-            ->where('user_id', $data['assigned_technician'])
-            ->where('assignment_role', 'technician')
-            ->whereNull('effective_to')
-            ->exists();
-        if (!$technicianAssignedToLab) {
-            throw ValidationException::withMessages(['assigned_technician' => 'Select an active technician who is assigned to this sample’s destination laboratory.']);
-        }
-
-        if ($sample->transport_status !== 'received' || $sample->quality_status !== 'accepted') {
+            if ($sample->transport_status !== 'received' || $sample->quality_status !== 'accepted') {
                 throw ValidationException::withMessages(['event_type' => 'Testing can start only after laboratory receipt and quality acceptance.']);
             }
             if ((int) $sample->assigned_technician !== (int) $request->user()->id) {
@@ -239,6 +229,16 @@ class SampleController extends Controller
             'laboratory_test_ids' => ['required', 'array', 'min:1'],
             'laboratory_test_ids.*' => ['required', 'integer', 'distinct', Rule::exists('laboratory_tests', 'id')->where(fn ($query) => $query->where('is_active', true))],
         ]);
+
+        $technicianAssignedToLab = DB::table('laboratory_user')
+            ->where('laboratory_id', $sample->laboratory_id)
+            ->where('user_id', $data['assigned_technician'])
+            ->where('assignment_role', 'technician')
+            ->whereNull('effective_to')
+            ->exists();
+        if (!$technicianAssignedToLab) {
+            throw ValidationException::withMessages(['assigned_technician' => 'Select an active technician who is assigned to this sample’s destination laboratory.']);
+        }
 
         if ($sample->transport_status !== 'received' || $sample->quality_status !== 'accepted') {
             throw ValidationException::withMessages(['assigned_technician' => 'Only received, quality-accepted samples can be assigned for testing.']);
