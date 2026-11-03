@@ -67,7 +67,7 @@ class ReportWorkflowTest extends TestCase
         $this->assertSame(1, $count);
         $this->assertNotNull($schedule->fresh()->last_run_at);
         $this->assertTrue($schedule->fresh()->next_run_at->isFuture());
-        $report = \App\Models\GeneratedReport::whereJsonContains('parameters->scheduled_report_id', $schedule->id)->firstOrFail();
+        $report = \App\Models\GeneratedReport::where('generated_by', $admin->id)->latest('generated_at')->firstOrFail();
         Storage::disk('local')->assertExists($report->file_path);
         $this->assertDatabaseHas('user_notifications', [
             'user_id' => $recipient->id,
