@@ -39,12 +39,12 @@ Integrated Disease Surveillance System (IDSS) for the Ministry of Livestock and 
 
 ## Run in GitHub Codespaces
 
-From the inner Laravel application folder:
+From the repository root (the folder containing artisan and composer.json):
 
-```bash
-cd /workspaces/-government-idss-laravel12/-government-idss-laravel12
+~~~bash
+cd /workspaces/-government-idss-laravel12
 composer install
-```
+~~~
 
 If `.env` does not exist:
 
@@ -62,7 +62,7 @@ For Codespaces without a MySQL service, configure SQLite in `.env`:
 
 ```dotenv
 DB_CONNECTION=sqlite
-DB_DATABASE=/workspaces/-government-idss-laravel12/-government-idss-laravel12/database/government_idss.sqlite
+DB_DATABASE=database/government_idss.sqlite
 SESSION_DRIVER=database
 CACHE_STORE=file
 ```
@@ -71,7 +71,7 @@ Create the local database file and run migrations:
 
 ```bash
 touch database/government_idss.sqlite
-php artisan config:clear
+php artisan optimize:clear
 php artisan migrate
 ```
 
@@ -98,6 +98,31 @@ php artisan migrate:status
 ```
 
 Tests use an in-memory SQLite database configured in `phpunit.xml.dist`, so they should not overwrite the local development database.
+
+
+### Phase 6 — Security and production readiness
+
+- Global security headers and HTTPS-only HSTS behavior; production session cookies default to Secure and encrypted.
+- Trusted proxy configuration defaults to loopback; set the approved proxy addresses in production.
+- PostgreSQL connection configuration for the production database target; SQLite remains the Codespaces default.
+- Additive operational indexes, a database readiness endpoint at /health/idss, and a private verified database backup command (SQLite and PostgreSQL).
+- Daily database backup scheduling and documented backup/restore, PostgreSQL/PostGIS deployment, monitoring and security-readiness procedures.
+
+See [Phase 6 security and production readiness](docs/PHASE_6_SECURITY_PRODUCTION_READINESS.md). This is not production certification: Ministry UAT, independent security assessment, PostGIS boundary data, off-host backup vault and a restore rehearsal remain required.
+
+To create a local database backup:
+
+~~~bash
+php artisan idss:backup
+~~~
+
+Run the Laravel scheduler continuously in a separate terminal during development, or use the production platform's scheduler service:
+
+~~~bash
+php artisan schedule:work
+~~~
+
+The readiness endpoint is /health/idss.
 
 ## Role-based access and account creation
 
@@ -127,7 +152,9 @@ This repository is an operational development foundation, not a certified produc
 - Advanced spatial hotspot analysis, official administrative-boundary overlays, PostGIS spatial queries and map export remain. The current GIS map supports disease/species/date/area filters and uses entered case/farm/outbreak coordinates.
 - UTAMBUZI integration, which cannot be activated until the Ministry provides the official API specification, authorized credentials, and test environment.
 - Password reset delivery, account lockout policy, configurable idle timeout, and additional security review.
-- Production database configuration (the SRS specifies PostgreSQL), HTTPS, backups, deployment monitoring, UAT, and formal acceptance.
+- Provisioned PostgreSQL 14+ with PostGIS, TLS validation, least-privilege credentials and production migration reconciliation. The repository includes the connection configuration, but does not provision Ministry infrastructure.
+- Independent penetration testing, production-sized performance testing, external monitoring/alert routing, encrypted off-host backup storage and a successful restore rehearsal.
+- Ministry UAT, approved role/permission matrix, data governance, incident response procedures and formal go-live acceptance.
 
 Do not treat suspected outbreak records or unapproved laboratory findings as official diagnoses. Confirm all clinical and surveillance decisions through authorized Ministry procedures.
 
