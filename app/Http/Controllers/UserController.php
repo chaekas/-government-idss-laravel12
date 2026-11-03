@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\Office;
 use App\Models\Organization;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -74,6 +75,7 @@ class UserController extends Controller
 
         $data['is_active'] = true;
         $user = User::create($data);
+        if ($role = Role::where('name', $user->role)->first()) { $user->roles()->sync([$role->id]); }
         $this->audit($request, 'user.created', $user, 'Created staff account '.$user->email.' with role '.$user->role);
 
         return redirect()->route('users.index')->with('status', 'User created successfully.');
@@ -117,6 +119,8 @@ class UserController extends Controller
         }
 
         $user->update($data);
+        $canonicalRole = in_array($user->role, config('idss.administrator_aliases', []), true) ? 'system_admin' : $user->role;
+        if ($role = Role::where('name', $canonicalRole)->first()) { $user->roles()->sync([$role->id]); }
         $this->audit($request, 'user.updated', $user, 'Updated staff account '.$user->email);
 
         return redirect()->route('users.index')->with('status', 'Staff account updated.');
