@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdministrativeArea;
+use App\Models\Department;
+use App\Models\Office;
+use App\Models\Organization;
 use App\Models\AuditLog;
 use App\Models\Breed;
 use App\Models\DiseaseCategory;
@@ -21,6 +24,9 @@ class MasterDataController extends Controller
     private function definitions(): array
     {
         return [
+            'organizations' => ['title' => 'Organizations', 'model' => Organization::class, 'fields' => ['code','name','organization_type','is_active']],
+            'departments' => ['title' => 'Departments', 'model' => Department::class, 'fields' => ['organization_id','code','name','is_active']],
+            'offices' => ['title' => 'Offices', 'model' => Office::class, 'fields' => ['organization_id','department_id','administrative_area_id','code','name','office_type','is_active']],
             'surveillance-alert-rules' => ['title' => 'Surveillance alert rules', 'model' => SurveillanceAlertRule::class, 'fields' => ['code','name','severity','case_threshold','within_hours','notify_field_officers','notify_regional_officers','notify_ministry_officers','is_active']],
             'farm-types' => ['title' => 'Farm types', 'model' => FarmType::class, 'fields' => ['code','name','description','sort_order','is_active']],
             'species' => ['title' => 'Species', 'model' => Species::class, 'fields' => ['code','name','description','is_active']],
@@ -103,6 +109,8 @@ class MasterDataController extends Controller
     private function formOptions(): array
     {
         return [
+            'organizations' => Organization::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'departments' => Department::where('is_active', true)->orderBy('name')->get(['id', 'organization_id', 'name']),
             'species' => Species::orderBy('name')->get(['id', 'name']),
             'diseaseCategories' => DiseaseCategory::orderBy('name')->get(['id', 'name']),
             'administrativeAreas' => AdministrativeArea::orderBy('name')->get(['id', 'name', 'area_type']),
@@ -126,6 +134,9 @@ class MasterDataController extends Controller
     {
         $unique = fn (string $table, string $column = 'code') => Rule::unique($table, $column)->ignore($ignoreId);
         $rules = match ($type) {
+            'organizations' => ['code' => ['required','string','max:80',$unique('organizations')], 'name' => ['required','string','max:180'], 'organization_type' => ['nullable','string','max:80'], 'is_active' => ['required','boolean']],
+            'departments' => ['organization_id' => ['nullable','exists:organizations,id'], 'code' => ['required','string','max:80',$unique('departments')], 'name' => ['required','string','max:180'], 'is_active' => ['required','boolean']],
+            'offices' => ['organization_id' => ['nullable','exists:organizations,id'], 'department_id' => ['nullable','exists:departments,id'], 'administrative_area_id' => ['nullable','exists:administrative_areas,id'], 'code' => ['required','string','max:80',$unique('offices')], 'name' => ['required','string','max:180'], 'office_type' => ['nullable','string','max:80'], 'is_active' => ['required','boolean']],
             'surveillance-alert-rules' => ['code' => ['required','string','max:80',$unique('surveillance_alert_rules')], 'name' => ['required','string','max:160'], 'severity' => ['required',Rule::in(['low','medium','high','critical'])], 'case_threshold' => ['required','integer','min:1','max:100000'], 'within_hours' => ['required','integer','min:1','max:8760'], 'notify_field_officers' => ['required','boolean'], 'notify_regional_officers' => ['required','boolean'], 'notify_ministry_officers' => ['required','boolean'], 'is_active' => ['required','boolean']],
             'farm-types' => ['code' => ['required','string','max:80',$unique('farm_types')], 'name' => ['required','string','max:120',$unique('farm_types','name')], 'description' => ['nullable','string','max:2000'], 'sort_order' => ['nullable','integer','min:0'], 'is_active' => ['required','boolean']],
             'species' => ['code' => ['required','string','max:80',$unique('species')], 'name' => ['required','string','max:120',$unique('species','name')], 'description' => ['nullable','string','max:2000'], 'is_active' => ['required','boolean']],
@@ -140,6 +151,9 @@ class MasterDataController extends Controller
         };
 
         $data = $request->validate($rules);
+        if ($type === 'offices' && !empty($data['department_id']) && !empty($data['organization_id'])) {
+            abort_unless(Department::whereKey($data['department_id'])->where('organization_id', $data['organization_id'])->exists(), 422, 'The selected department does not belong to the selected organization.');
+        }
         if ($type === 'breeds') {
             $exists = Breed::where('species_id', $data['species_id'])->where('code', $data['code'])->when($ignoreId, fn ($q) => $q->where('id', '<>', $ignoreId))->exists();
             abort_if($exists, 422, 'The breed code already exists for this species.');
