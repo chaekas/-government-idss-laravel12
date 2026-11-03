@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\AdministrativeArea;
 use App\Models\Farm;
 use App\Models\FarmLocation;
 use App\Models\FarmType;
@@ -37,6 +38,7 @@ class FarmController extends Controller
         return view('farms.create', [
             'farmers' => Farmer::where('status', 'active')->orderBy('full_name')->get(),
             'farmTypes' => FarmType::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
+            'administrativeAreas' => AdministrativeArea::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 
