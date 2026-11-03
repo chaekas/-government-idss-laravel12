@@ -36,7 +36,13 @@ class IntegrationOutboxService
             ->get();
 
         foreach ($items as $item) {
-            $adapterClass = config('idss_integrations.providers.'.$item->provider.'.adapter');
+            $providerConfig = config('idss_integrations.providers.'.$item->provider, []);
+            $adapterClass = $providerConfig['adapter'] ?? null;
+            if (!($providerConfig['enabled'] ?? false)) {
+                $item->update(['status' => 'blocked', 'last_error' => 'Provider delivery is disabled until the Ministry approves and configures the connector.']);
+                $this->log($item, 'blocked', null, 'Provider delivery is disabled.');
+                continue;
+            }
             if (!$adapterClass || !class_exists($adapterClass)) {
                 $item->update(['status' => 'blocked', 'last_error' => 'No approved adapter is configured for this provider.']);
                 $this->log($item, 'blocked', null, 'No approved adapter is configured.');
