@@ -24,15 +24,31 @@ class DiseaseSurveillanceTest extends TestCase
 {
     use RefreshDatabase;
 
+    private ?AdministrativeArea $testArea = null;
+
+    private function area(): AdministrativeArea
+    {
+        return $this->testArea ??= AdministrativeArea::create([
+            'code' => 'TEST-AREA-'.Str::upper(Str::random(6)),
+            'name' => 'Test Region',
+            'area_type' => 'region',
+            'is_active' => true,
+        ]);
+    }
+
     private function user(string $role): User
     {
-        return User::create(['name'=>'Test '.$role,'email'=>$role.'-'.Str::random(8).'@example.test','password'=>'Correct-Horse-Battery-42!','role'=>$role,'is_active'=>true]);
+        $user = User::create(['name'=>'Test '.$role,'email'=>$role.'-'.Str::random(8).'@example.test','password'=>'Correct-Horse-Battery-42!','role'=>$role,'is_active'=>true]);
+        if (in_array($role, ['field_officer', 'regional_veterinary_officer'], true)) {
+            $user->administrativeAreas()->attach($this->area()->id, ['effective_from' => now()->toDateString()]);
+        }
+        return $user;
     }
 
     private function farm(User $officer): Farm
     {
         $farmer=Farmer::create(['farmer_code'=>'FRM-'.Str::upper(Str::random(8)),'full_name'=>'Surveillance Farmer','region'=>'Dodoma','district'=>'Kondoa']);
-        return Farm::create(['farm_code'=>'FARM-'.Str::upper(Str::random(8)),'farmer_id'=>$farmer->id,'name'=>'Surveillance Farm','region'=>'Dodoma','district'=>'Kondoa','latitude'=>-6.0,'longitude'=>35.0,'bird_count'=>100,'status'=>'active']);
+        return Farm::create(['farm_code'=>'FARM-'.Str::upper(Str::random(8)),'farmer_id'=>$farmer->id,'name'=>'Surveillance Farm','region'=>'Dodoma','district'=>'Kondoa','latitude'=>-6.0,'longitude'=>35.0,'bird_count'=>100,'status'=>'active','administrative_area_id'=>$this->area()->id]);
     }
 
     private function case(User $reporter,Farm $farm,array $overrides=[]): DiseaseCase
@@ -41,7 +57,7 @@ class DiseaseSurveillanceTest extends TestCase
             'case_code'=>'CASE-'.Str::upper(Str::random(8)),'farm_id'=>$farm->id,'reported_by'=>$reporter->id,
             'disease_suspected'=>'Suspected poultry disease','affected_species'=>'Poultry','date_observed'=>now()->subDay()->toDateString(),
             'reported_at'=>now(),'symptoms'=>'Respiratory signs and reduced feed intake','birds_affected'=>8,'birds_dead'=>2,
-            'severity'=>'high','status'=>'reported','latitude'=>-6.0,'longitude'=>35.0,
+            'severity'=>'high','status'=>'reported','latitude'=>-6.0,'longitude'=>35.0,'administrative_area_id'=>$farm->administrative_area_id,
         ],$overrides));
     }
 
