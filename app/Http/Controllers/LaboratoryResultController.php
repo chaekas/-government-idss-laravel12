@@ -51,12 +51,8 @@ class LaboratoryResultController extends Controller
         abort_unless($request->user()->role === 'laboratory_technician', 403);
 
         $data = $request->validate([
-            'laboratory_test_assignment_id' => ['nullable', 'exists:laboratory_test_assignments,id'],
-            'sample_id' => ['required_without:laboratory_test_assignment_id', 'nullable', 'exists:samples,id'],
-            'laboratory_id' => ['required_without:laboratory_test_assignment_id', 'nullable', 'exists:laboratories,id'],
-            'test_name' => ['required_without:laboratory_test_assignment_id', 'nullable', 'string', 'max:180'],
+            'laboratory_test_assignment_id' => ['required', 'exists:laboratory_test_assignments,id'],
             'test_method_id' => ['nullable', 'exists:test_methods,id'],
-            'method' => ['nullable', 'string', 'max:180'],
             'observations' => ['nullable', 'string', 'max:5000'],
             'qualitative_result' => ['nullable', 'string', 'max:180'],
             'numeric_result' => ['nullable', 'numeric'],
@@ -64,52 +60,53 @@ class LaboratoryResultController extends Controller
             'technician_comments' => ['nullable', 'string', 'max:3000'],
         ]);
 
-        $assignment = null;
-        if (!empty($data['laboratory_test_assignment_id'])) {
-            $assignment = LaboratoryTestAssignment::with(['sample', 'test'])->findOrFail($data['laboratory_test_assignment_id']);
-            if ((int) $assignment->assigned_technician !== (int) $request->user()->id || !in_array($assignment->status, ['assigned', 'in_progress'], true)) {
-                throw ValidationException::withMessages(['laboratory_test_assignment_id' => 'This diagnostic test is not assigned to your account or is no longer open.']);
-            }
-            $data['sample_id'] = $assignment->sample_id;
-            $data['laboratory_id'] = $assignment->laboratory_id;
-            $data['test_name'] = $assignment->test?->name;
-            $data['laboratory_test_id'] = $assignment->laboratory_test_id;
+        $assignment = LaboratoryTestAssignment::with(['sample.diseaseCase', 'sample.laboratory', 'test'])
+            ->findOrFail($data['laboratory_test_assignment_id']);
+        if ((int) $assignment->assigned_technician !== (int) $request->user()->id || !in_array($assignment->status, ['assigned', 'in_progress'], true)) {
+            throw ValidationException::withMessages(['laboratory_test_assignment_id' => 'This diagnostic test is not assigned to your account or is no longer open.']);
+        }
+        if (!$assignment->test || !$assignment->test->is_active) {
+            throw ValidationException::withMessages(['laboratory_test_assignment_id' => 'The assigned diagnostic test is no longer active in the approved catalogue.']);
         }
 
-        $sample = Sample::with('diseaseCase')->findOrFail($data['sample_id']);
+        $sample = $assignment->sample;
         if ($sample->quality_status !== 'accepted' || $sample->transport_status !== 'received') {
-            throw ValidationException::withMessages(['sample_id' => 'The sample must be received and quality-accepted before testing.']);
+            throw ValidationException::withMessages(['laboratory_test_assignment_id' => 'The sample must be received and quality-accepted before testing.']);
         }
         if ((int) $sample->assigned_technician !== (int) $request->user()->id) {
-            throw ValidationException::withMessages(['sample_id' => 'Only the technician assigned to this sample may record its laboratory test. Ask the laboratory manager to assign it first.']);
-        }
-        if (!$sample->laboratory_id || (int) $sample->laboratory_id !== (int) $data['laboratory_id']) {
-            throw ValidationException::withMessages(['laboratory_id' => 'The selected laboratory must match the sample destination.']);
+            throw ValidationException::withMessages(['laboratory_test_assignment_id' => 'Only the technician assigned to this sample may record its laboratory test.']);
         }
         if (!in_array($sample->test_status, ['in_progress', 'completed'], true) || !$sample->testing_started_at) {
-            throw ValidationException::withMessages(['sample_id' => 'The assigned technician must start the examination before entering test results.']);
-        }
-        if ($sample->test_status === 'approved') {
-            throw ValidationException::withMessages(['sample_id' => 'The sample has already been finally approved and released.']);
+            throw ValidationException::withMessages(['laboratory_test_assignment_id' => 'The assigned technician must start the examination before entering test results.']);
         }
         if (blank($data['qualitative_result'] ?? null) && !isset($data['numeric_result']) && blank($data['observations'] ?? null)) {
             throw ValidationException::withMessages(['qualitative_result' => 'Enter at least one finding: a qualitative result, a numeric result, or observations.']);
         }
 
+        $methodRecord = null;
         if (!empty($data['test_method_id'])) {
             $methodRecord = TestMethod::where('is_active', true)->findOrFail($data['test_method_id']);
-            $data['method'] = $methodRecord->name;
         }
-        $data['result_code'] = 'RES-'.now()->format('ymd').'-'.Str::upper(Str::random(6));
-        $data['assigned_technician'] = $request->user()->id;
-        $data['status'] = 'submitted_for_review';
-        $data['tested_at'] = now();
-        $result = LaboratoryTestResult::create($data);
+        $result = LaboratoryTestResult::create([
+            'result_code' => 'RES-'.now()->format('ymd').'-'.Str::upper(Str::random(6)),
+            'sample_id' => $sample->id,
+            'laboratory_id' => $assignment->laboratory_id,
+            'assigned_technician' => $request->user()->id,
+            'laboratory_test_id' => $assignment->laboratory_test_id,
+            'laboratory_test_assignment_id' => $assignment->id,
+            'test_method_id' => $methodRecord?->id,
+            'test_name' => $assignment->test->name,
+            'method' => $methodRecord?->name,
+            'observations' => $data['observations'] ?? null,
+            'qualitative_result' => $data['qualitative_result'] ?? null,
+            'numeric_result' => $data['numeric_result'] ?? null,
+            'numeric_unit' => $data['numeric_unit'] ?? null,
+            'technician_comments' => $data['technician_comments'] ?? null,
+            'status' => 'submitted_for_review',
+            'tested_at' => now(),
+        ]);
 
-        if ($assignment) {
-            $assignment->update(['status' => 'submitted_for_review', 'completed_at' => now()]);
-        }
-
+        $assignment->update(['status' => 'submitted_for_review', 'completed_at' => now()]);
         $sample->update([
             'test_status' => 'completed',
             'testing_started_at' => $sample->testing_started_at ?: now(),
