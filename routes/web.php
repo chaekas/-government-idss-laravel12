@@ -24,7 +24,6 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Throwable;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
 
@@ -39,7 +38,7 @@ Route::get('/health/idss', function () {
             'service' => 'government-idss',
             'checks' => ['database' => 'ok'],
         ]);
-    } catch (Throwable $exception) {
+    } catch (\\Throwable $exception) {
         Log::warning('IDSS readiness check failed.', [
             'exception' => get_class($exception),
         ]);
