@@ -261,6 +261,14 @@ class SurveillanceWorkflowTest extends TestCase
         $technician = $this->makeUser('laboratory_technician');
         $manager = $this->makeUser('laboratory_manager');
 
+        $area = AdministrativeArea::create([
+            'code' => 'GUARD-'.Str::upper(Str::random(4)),
+            'name' => 'Guard Region',
+            'area_type' => 'region',
+            'is_active' => true,
+        ]);
+        $officer->administrativeAreas()->attach($area->id, ['effective_from' => now()->toDateString()]);
+
         $farmer = Farmer::create([
             'farmer_code' => 'FRM-'.Str::upper(Str::random(8)),
             'full_name' => 'Workflow Guard Test Farmer',
@@ -298,13 +306,6 @@ class SurveillanceWorkflowTest extends TestCase
             'status' => 'under_investigation',
             'field_observations' => 'Sample collection required.',
         ]);
-        $area = AdministrativeArea::create([
-            'code' => 'GUARD-'.Str::upper(Str::random(4)),
-            'name' => 'Guard Region',
-            'area_type' => 'region',
-            'is_active' => true,
-        ]);
-        $officer->administrativeAreas()->attach($area->id, ['effective_from' => now()->toDateString()]);
         $laboratory = Laboratory::create([
             'code' => 'LAB-'.Str::upper(Str::random(8)),
             'name' => 'Workflow Guard Laboratory',
@@ -313,6 +314,8 @@ class SurveillanceWorkflowTest extends TestCase
             'district' => 'Dodoma',
             'is_active' => true,
         ]);
+        $laboratory->technicians()->attach($technician->id, ['assignment_role' => 'technician', 'effective_from' => now()->toDateString()]);
+        $laboratory->technicians()->attach($manager->id, ['assignment_role' => 'manager', 'effective_from' => now()->toDateString()]);
         $catalogueTest = LaboratoryTest::create([
             'code' => 'GUARD-PCR-'.Str::upper(Str::random(4)),
             'name' => 'Newcastle disease PCR',
