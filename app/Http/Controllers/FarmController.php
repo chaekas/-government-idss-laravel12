@@ -170,11 +170,21 @@ class FarmController extends Controller
         DB::transaction(function () use ($farm, $data, $newFarmerId, $oldFarmerId, $request) {
             $farm->update($data);
             if ($newFarmerId !== $oldFarmerId) {
-                $farm->farmers()->updateExistingPivot($oldFarmerId, [
-                    'effective_to' => now()->toDateString(), 'is_primary' => false,
-                ]);
-                $farm->farmers()->syncWithoutDetaching([
-                    $newFarmerId => ['ownership_type' => 'owner', 'is_primary' => true, 'effective_from' => now()->toDateString(), 'effective_to' => null],
+                DB::table('farmer_farm')
+                    ->where('farm_id', $farm->id)
+                    ->where('farmer_id', $oldFarmerId)
+                    ->whereNull('effective_to')
+                    ->update(['effective_to' => now()->toDateString(), 'is_primary' => false, 'updated_at' => now()]);
+                DB::table('farmer_farm')->insert([
+                    'farm_id' => $farm->id,
+                    'farmer_id' => $newFarmerId,
+                    'ownership_type' => 'owner',
+                    'ownership_share' => null,
+                    'effective_from' => now()->toDateString(),
+                    'effective_to' => null,
+                    'is_primary' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
             $farm->locations()->where('is_primary', true)->update(['is_primary' => false]);
