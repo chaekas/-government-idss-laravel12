@@ -62,7 +62,7 @@ class BackupDatabase extends Command
             }
 
             Log::error('IDSS database backup failed.', [
-                'driver' => DB::getDriverName(),
+                'driver' => config('database.default'),
                 'exception' => $exception->getMessage(),
             ]);
 
