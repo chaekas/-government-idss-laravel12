@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class ProductionReadinessTest extends TestCase
@@ -34,17 +36,17 @@ class ProductionReadinessTest extends TestCase
         $this->assertFalse($response->headers->has('Strict-Transport-Security'));
     }
 
-    public function test_hsts_is_only_added_when_request_is_https_and_policy_is_enabled(): void
+    public function test_hsts_is_only_added_to_secure_requests_when_policy_is_enabled(): void
     {
         config(['idss.security.hsts_enabled' => true]);
+        $middleware = app(SecurityHeaders::class);
 
-        $this->get(route('login'))
-            ->assertOk()
-            ->assertHeaderMissing('Strict-Transport-Security');
+        $httpRequest = Request::create('http://idss.test/login');
+        $httpResponse = $middleware->handle($httpRequest, fn () => response('ok'));
+        $this->assertFalse($httpResponse->headers->has('Strict-Transport-Security'));
 
-        $this->withServerVariables(['HTTPS' => 'on'])
-            ->get(route('login'))
-            ->assertOk()
-            ->assertHeader('Strict-Transport-Security', 'max-age=31536000');
+        $httpsRequest = Request::create('https://idss.test/login');
+        $httpsResponse = $middleware->handle($httpsRequest, fn () => response('ok'));
+        $this->assertSame('max-age=31536000', $httpsResponse->headers->get('Strict-Transport-Security'));
     }
 }
