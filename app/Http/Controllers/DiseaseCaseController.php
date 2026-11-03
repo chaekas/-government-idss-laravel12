@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Services\UserDataScope;
 
 class DiseaseCaseController extends Controller
 {
@@ -37,23 +38,14 @@ class DiseaseCaseController extends Controller
             ->when($request->filled('to'), fn($q)=>$q->whereDate('date_observed','<=',$request->date('to')))
             ->latest('reported_at');
 
-        if ($request->user()->role === 'farmer') {
-            abort_unless($request->user()->farmer_id,403,'Your account is not linked to a farmer record.');
-            $farmerId=$request->user()->farmer_id;
-            $query->whereHas('farm',fn($farm)=>$farm->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to')));
-        }
+        $query = app(UserDataScope::class)->cases($query, $request->user());
 
         return view('cases.index',['cases'=>$query->paginate(20)->withQueryString()]);
     }
 
     public function create(Request $request)
     {
-        $farms = Farm::with('farmer')->where('status','active');
-        if ($request->user()->role === 'farmer') {
-            abort_unless($request->user()->farmer_id,403,'Your account is not linked to a farmer record.');
-            $farmerId=$request->user()->farmer_id;
-            $farms->where(fn($q)=>$q->where('farmer_id',$farmerId)->orWhereHas('farmers',fn($owners)=>$owners->where('farmers.id',$farmerId)->whereNull('farmer_farm.effective_to')));
-        }
+        $farms = app(UserDataScope::class)->farms(Farm::with('farmer')->where('status','active'), $request->user());
         return view('cases.create',[
             'farms'=>$farms->orderBy('name')->get(),
             'animals'=>Animal::where('ownership_status','active')->orderBy('animal_code')->get(),
@@ -98,7 +90,9 @@ class DiseaseCaseController extends Controller
         ]);
 
         $farm=Farm::findOrFail($data['farm_id']);
-        if($request->user()->role==='farmer' && (int)$farm->farmer_id !== (int)$request->user()->farmer_id && !$farm->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists()) throw ValidationException::withMessages(['farm_id'=>'You may only report against a farm linked to your farmer account.']);
+        if (!app(UserDataScope::class)->farms(Farm::query()->whereKey($farm->id), $request->user())->exists()) {
+            throw ValidationException::withMessages(['farm_id' => 'You do not have permission to report against a farm outside your assigned ownership or geographic area.']);
+        }
         if (!empty($data['animal_id']) && !Animal::whereKey($data['animal_id'])->where('farm_id',$farm->id)->exists()) {
             throw ValidationException::withMessages(['animal_id'=>'The selected animal does not belong to the selected farm.']);
         }
@@ -185,6 +179,7 @@ class DiseaseCaseController extends Controller
 
     public function close(Request $request,DiseaseCase $case)
     {
+        $this->authorizeCase($request, $case);
         abort_unless(in_array($request->user()->role,['regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'],true),403);
         abort_if($case->status==='closed',422,'This case is already closed.');
         abort_unless(in_array($case->status,['confirmed','rejected'],true) || $case->investigation?->approved_at,422,'A case can be closed only after a final laboratory decision or an approved investigation report.');
@@ -196,8 +191,8 @@ class DiseaseCaseController extends Controller
 
     private function authorizeCase(Request $request,DiseaseCase $case): void
     {
-        if($request->user()->role==='farmer') abort_unless((int)$case->farm?->farmer_id === (int)$request->user()->farmer_id || $case->farm?->farmers()->where('farmers.id',$request->user()->farmer_id)->whereNull('farmer_farm.effective_to')->exists(),403);
-        else abort_unless(in_array($request->user()->role,self::STAFF_ROLES,true),403);
+        abort_unless(app(UserDataScope::class)->cases(DiseaseCase::query()->whereKey($case->id), $request->user())->exists(), 404);
+        abort_unless(in_array($request->user()->role, self::STAFF_ROLES, true) || $request->user()->role === 'farmer', 403);
     }
 
     private function notifySurveillanceUsers(DiseaseCase $case,string $title,string $message,string $category): void
