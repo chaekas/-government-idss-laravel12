@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Department;
+use App\Models\AdministrativeArea;
+use App\Models\Laboratory;
 use App\Models\Office;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules\Password;
@@ -27,6 +30,8 @@ class UserController extends Controller
             'organizations' => Organization::where('is_active', true)->orderBy('name')->get(),
             'departments' => Department::where('is_active', true)->orderBy('name')->get(),
             'offices' => Office::where('is_active', true)->orderBy('name')->get(),
+            'administrativeAreas' => AdministrativeArea::where('is_active', true)->orderBy('area_type')->orderBy('name')->get(),
+            'laboratories' => Laboratory::where('is_active', true)->orderBy('name')->get(),
         ];
     }
 
@@ -46,10 +51,32 @@ class UserController extends Controller
         }
     }
 
+    private function syncAssignments(User $user, array $areaIds, array $laboratoryIds): void
+    {
+        $today = now()->toDateString();
+        $areaIds = array_values(array_unique(array_map('intval', $areaIds)));
+        $currentAreas = DB::table('user_administrative_area')->where('user_id', $user->id)->whereNull('effective_to')->pluck('administrative_area_id')->map(fn ($id) => (int) $id)->all();
+        foreach (array_diff($currentAreas, $areaIds) as $id) {
+            DB::table('user_administrative_area')->where('user_id', $user->id)->where('administrative_area_id', $id)->whereNull('effective_to')->update(['effective_to' => $today, 'updated_at' => now()]);
+        }
+        foreach (array_diff($areaIds, $currentAreas) as $id) {
+            DB::table('user_administrative_area')->insert(['user_id' => $user->id, 'administrative_area_id' => $id, 'effective_from' => $today, 'effective_to' => null, 'created_at' => now(), 'updated_at' => now()]);
+        }
+
+        $laboratoryIds = array_values(array_unique(array_map('intval', $laboratoryIds)));
+        $currentLabs = DB::table('laboratory_user')->where('user_id', $user->id)->whereNull('effective_to')->pluck('laboratory_id')->map(fn ($id) => (int) $id)->all();
+        foreach (array_diff($currentLabs, $laboratoryIds) as $id) {
+            DB::table('laboratory_user')->where('user_id', $user->id)->where('laboratory_id', $id)->whereNull('effective_to')->update(['effective_to' => $today, 'updated_at' => now()]);
+        }
+        foreach (array_diff($laboratoryIds, $currentLabs) as $id) {
+            DB::table('laboratory_user')->insert(['user_id' => $user->id, 'laboratory_id' => $id, 'assignment_role' => $user->role, 'effective_from' => $today, 'effective_to' => null, 'created_at' => now(), 'updated_at' => now()]);
+        }
+    }
+
     public function index()
     {
         return view('users.index', [
-            'users' => User::with(['organization', 'department', 'office'])->where('role', '<>', 'farmer')->orderBy('name')->paginate(20),
+            'users' => User::with(['organization', 'department', 'office', 'administrativeAreas', 'laboratories'])->where('role', '<>', 'farmer')->orderBy('name')->paginate(20),
             ...$this->assignmentOptions(),
         ]);
     }
@@ -70,11 +97,19 @@ class UserController extends Controller
             'organization_id' => ['nullable', 'exists:organizations,id'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'office_id' => ['nullable', 'exists:offices,id'],
+            'administrative_area_ids' => ['nullable', 'array'],
+            'administrative_area_ids.*' => ['integer', 'distinct', 'exists:administrative_areas,id'],
+            'laboratory_ids' => ['nullable', 'array'],
+            'laboratory_ids.*' => ['integer', 'distinct', 'exists:laboratories,id'],
         ]);
         $this->validateAssignmentHierarchy($data);
 
+        $areaIds = $data['administrative_area_ids'] ?? [];
+        $laboratoryIds = $data['laboratory_ids'] ?? [];
+        unset($data['administrative_area_ids'], $data['laboratory_ids']);
         $data['is_active'] = true;
         $user = User::create($data);
+        $this->syncAssignments($user, $areaIds, $laboratoryIds);
         if ($role = Role::where('name', $user->role)->first()) { $user->roles()->sync([$role->id]); }
         $this->audit($request, 'user.created', $user, 'Created staff account '.$user->email.' with role '.$user->role);
 
@@ -97,8 +132,15 @@ class UserController extends Controller
             'organization_id' => ['nullable', 'exists:organizations,id'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'office_id' => ['nullable', 'exists:offices,id'],
+            'administrative_area_ids' => ['nullable', 'array'],
+            'administrative_area_ids.*' => ['integer', 'distinct', 'exists:administrative_areas,id'],
+            'laboratory_ids' => ['nullable', 'array'],
+            'laboratory_ids.*' => ['integer', 'distinct', 'exists:laboratories,id'],
         ]);
         $this->validateAssignmentHierarchy($data);
+        $areaIds = $data['administrative_area_ids'] ?? [];
+        $laboratoryIds = $data['laboratory_ids'] ?? [];
+        unset($data['administrative_area_ids'], $data['laboratory_ids']);
 
         $isAdministratorAccount = in_array($user->role, $adminRoleAliases, true);
         if ($user->is($request->user()) && (!in_array($data['role'], $adminRoleAliases, true) || !$request->boolean('is_active'))) {
@@ -119,6 +161,7 @@ class UserController extends Controller
         }
 
         $user->update($data);
+        $this->syncAssignments($user, $areaIds, $laboratoryIds);
         $canonicalRole = in_array($user->role, config('idss.administrator_aliases', []), true) ? 'system_admin' : $user->role;
         if ($role = Role::where('name', $canonicalRole)->first()) { $user->roles()->sync([$role->id]); }
         $this->audit($request, 'user.updated', $user, 'Updated staff account '.$user->email);
