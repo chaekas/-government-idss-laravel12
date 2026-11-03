@@ -15,6 +15,7 @@ use App\Services\DiseaseCaseWorkflow;
 use App\Services\UserDataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -39,7 +40,7 @@ class SampleController extends Controller
 
         $query = app(UserDataScope::class)->samples($query, $request->user());
 
-        return view('samples.index', ['samples' => $query->paginate(15), 'laboratoryTests' => LaboratoryTest::where('is_active', true)->orderBy('name')->get()]);
+        return view('samples.index', ['samples' => $query->paginate(15), 'laboratoryTests' => LaboratoryTest::where('is_active', true)->orderBy('name')->get(), 'technicians' => User::with(['laboratories' => fn ($labs) => $labs->where('laboratories.is_active', true)])->where('role', 'laboratory_technician')->where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function create()
@@ -140,7 +141,17 @@ class SampleController extends Controller
             }
         } elseif ($event === 'testing_started') {
             abort_unless($isAdmin || $role === 'laboratory_technician', 403);
-            if ($sample->transport_status !== 'received' || $sample->quality_status !== 'accepted') {
+            $technicianAssignedToLab = DB::table('laboratory_user')
+            ->where('laboratory_id', $sample->laboratory_id)
+            ->where('user_id', $data['assigned_technician'])
+            ->where('assignment_role', 'technician')
+            ->whereNull('effective_to')
+            ->exists();
+        if (!$technicianAssignedToLab) {
+            throw ValidationException::withMessages(['assigned_technician' => 'Select an active technician who is assigned to this sample’s destination laboratory.']);
+        }
+
+        if ($sample->transport_status !== 'received' || $sample->quality_status !== 'accepted') {
                 throw ValidationException::withMessages(['event_type' => 'Testing can start only after laboratory receipt and quality acceptance.']);
             }
             if ((int) $sample->assigned_technician !== (int) $request->user()->id) {
