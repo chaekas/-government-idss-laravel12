@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\DiseaseCase;
 use App\Models\Laboratory;
+use App\Models\LaboratoryTest;
+use App\Models\LaboratoryTestAssignment;
 use App\Models\Sample;
 use App\Models\SampleMovement;
 use App\Models\User;
@@ -31,6 +33,7 @@ class SampleController extends Controller
             'assignedBy',
             'movements.recordedBy',
             'results',
+            'testAssignments.test',
         ])->latest();
 
         // Technicians work only on samples assigned to them. Field officers see
@@ -51,7 +54,7 @@ class SampleController extends Controller
             });
         }
 
-        return view('samples.index', ['samples' => $query->paginate(15)]);
+        return view('samples.index', ['samples' => $query->paginate(15), 'laboratoryTests' => LaboratoryTest::where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function create()
@@ -235,6 +238,8 @@ class SampleController extends Controller
                 'required',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'laboratory_technician')->where('is_active', true)),
             ],
+            'laboratory_test_ids' => ['nullable', 'array'],
+            'laboratory_test_ids.*' => ['integer', Rule::exists('laboratory_tests', 'id')->where(fn ($query) => $query->where('is_active', true))],
         ]);
 
         if ($sample->transport_status !== 'received' || $sample->quality_status !== 'accepted') {
@@ -253,6 +258,25 @@ class SampleController extends Controller
             'assigned_by' => $request->user()->id,
             'assigned_at' => now(),
         ]);
+
+        foreach (array_unique($data['laboratory_test_ids'] ?? []) as $testId) {
+            $alreadyOpen = LaboratoryTestAssignment::where('sample_id', $sample->id)
+                ->where('laboratory_test_id', $testId)
+                ->whereIn('status', ['assigned', 'in_progress', 'submitted_for_review', 'approved'])
+                ->exists();
+            if ($alreadyOpen) {
+                throw ValidationException::withMessages(['laboratory_test_ids' => 'A selected test already has an active or approved assignment for this sample.']);
+            }
+            LaboratoryTestAssignment::create([
+                'sample_id' => $sample->id,
+                'laboratory_test_id' => $testId,
+                'laboratory_id' => $sample->laboratory_id,
+                'assigned_technician' => $data['assigned_technician'],
+                'assigned_by' => $request->user()->id,
+                'status' => 'assigned',
+                'assigned_at' => now(),
+            ]);
+        }
 
         $this->recordMovement(
             $sample,
