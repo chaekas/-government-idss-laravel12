@@ -46,6 +46,7 @@ class BackupCommandTest extends TestCase
             $this->assertSame('preserved', $backup->query('SELECT value FROM backup_probe')->fetchColumn());
             $backup = null;
 
+            clearstatcache(true, $files[0]);
             $this->assertSame(0600, fileperms($files[0]) & 0777);
         } finally {
             DB::purge('sqlite');
