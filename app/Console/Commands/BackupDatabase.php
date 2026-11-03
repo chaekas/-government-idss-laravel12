@@ -38,7 +38,7 @@ class BackupDatabase extends Command
             };
 
             $path = rtrim($directory, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR
-                .'idss-db-'.now()->format('Ymd_His').'.'.$extension;
+                .'idss-db-'.now()->format('Ymd_His_u').'.'.$extension;
 
             if ($driver === 'sqlite') {
                 $this->backupSqlite($path);
@@ -50,6 +50,7 @@ class BackupDatabase extends Command
                 throw new \RuntimeException('The database backup was not created or is empty.');
             }
 
+            @chmod($path, 0600);
             $this->verifyBackup($path, $driver);
             $this->pruneOldBackups($directory);
 
