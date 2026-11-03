@@ -16,6 +16,7 @@
 <h2 class="section-title">Physical address</h2><div class="form-grid">
 <div class="field"><label>Region *</label><input name="region" value="{{ old('region', $farmer->region ?? '') }}" required></div>
 <div class="field"><label>District *</label><input name="district" value="{{ old('district', $farmer->district ?? '') }}" required></div>
+<div class="field"><label>Official administrative area</label><select name="administrative_area_id"><option value="">Not linked to official boundary</option>@foreach($administrativeAreas as $area)<option value="{{ $area->id }}" @selected(old('administrative_area_id', isset($farmer) ? $farmer->addresses()->where('is_primary', true)->value('administrative_area_id') : '')==$area->id)>{{ $area->name }} ({{ $area->area_type }})</option>@endforeach</select></div>
 <div class="field"><label>Ward</label><input name="ward" value="{{ old('ward', $farmer->ward ?? '') }}"></div>
 <div class="field"><label>Village</label><input name="village" value="{{ old('village', $farmer->village ?? '') }}"></div>
 <div class="field full"><label>Additional address</label><input name="address" value="{{ old('address', $farmer->address ?? '') }}"></div>
