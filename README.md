@@ -11,7 +11,7 @@ Integrated Disease Surveillance System (IDSS) for the Ministry of Livestock and 
 ## Current implementation
 
 ### Core registers
-- Secure sign-in/sign-out; public self-registration is disabled.
+- Secure sign-in/sign-out; public self-registration is limited to farmer accounts, while staff accounts are administrator-provisioned.
 - Protected surveillance dashboard with farmer, farm, animal, case, investigation, sample, and outbreak counts.
 - Farmer registration and listing with generated Farmer IDs.
 - Farm registration and listing, including administrative location and optional GPS coordinates.
