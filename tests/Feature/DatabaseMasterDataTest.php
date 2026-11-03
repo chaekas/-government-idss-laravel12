@@ -6,6 +6,9 @@ use App\Models\AuditLog;
 use App\Models\FarmType;
 use App\Models\Farmer;
 use App\Models\Farm;
+use App\Models\Organization;
+use App\Models\Department;
+use App\Models\Office;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -98,4 +101,62 @@ class DatabaseMasterDataTest extends TestCase
             ->get(route('master-data.index', 'species'))
             ->assertForbidden();
     }
+    public function test_administrator_can_manage_organization_department_and_office_master_data(): void
+    {
+        $admin = $this->user('system_admin');
+
+        $this->actingAs($admin)->post(route('master-data.store', 'organizations'), [
+            'code' => 'MINISTRY-MLF',
+            'name' => 'Ministry of Livestock and Fisheries',
+            'organization_type' => 'Ministry',
+            'is_active' => 1,
+        ])->assertRedirect(route('master-data.index', 'organizations'));
+
+        $organization = Organization::where('code', 'MINISTRY-MLF')->firstOrFail();
+
+        $this->post(route('master-data.store', 'departments'), [
+            'organization_id' => $organization->id,
+            'code' => 'ANIMAL-HEALTH',
+            'name' => 'Animal Health Department',
+            'is_active' => 1,
+        ])->assertRedirect(route('master-data.index', 'departments'));
+
+        $department = Department::where('code', 'ANIMAL-HEALTH')->firstOrFail();
+
+        $this->post(route('master-data.store', 'offices'), [
+            'organization_id' => $organization->id,
+            'department_id' => $department->id,
+            'code' => 'DODOMA-REGIONAL',
+            'name' => 'Dodoma Regional Veterinary Office',
+            'office_type' => 'Regional office',
+            'is_active' => 1,
+        ])->assertRedirect(route('master-data.index', 'offices'));
+
+        $this->assertDatabaseHas('offices', [
+            'code' => 'DODOMA-REGIONAL',
+            'organization_id' => $organization->id,
+            'department_id' => $department->id,
+        ]);
+        $this->assertSame(3, AuditLog::where('user_id', $admin->id)->where('action', 'master_data.created')->count());
+    }
+
+    public function test_office_cannot_be_linked_to_a_department_from_another_organization(): void
+    {
+        $admin = $this->user('system_admin');
+        $first = Organization::create(['code' => 'ORG-A', 'name' => 'Organization A', 'is_active' => true]);
+        $second = Organization::create(['code' => 'ORG-B', 'name' => 'Organization B', 'is_active' => true]);
+        $department = Department::create(['organization_id' => $first->id, 'code' => 'DEPT-A', 'name' => 'Department A', 'is_active' => true]);
+
+        $this->actingAs($admin)->from(route('master-data.create', 'offices'))
+            ->post(route('master-data.store', 'offices'), [
+                'organization_id' => $second->id,
+                'department_id' => $department->id,
+                'code' => 'OFFICE-B',
+                'name' => 'Office B',
+                'is_active' => 1,
+            ])
+            ->assertSessionHasErrors();
+    }
+
+
 }
