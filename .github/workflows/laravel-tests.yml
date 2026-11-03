@@ -1,10 +1,11 @@
-name: Laravel tests
+name: Laravel tests and database compatibility
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,6 +13,24 @@ permissions:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.2', '8.3', '8.4']
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: government_idss
+          POSTGRES_USER: government_idss
+          POSTGRES_PASSWORD: idss-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U government_idss -d government_idss"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -19,9 +38,12 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: ctype, curl, dom, fileinfo, mbstring, pdo_sqlite, sqlite3, tokenizer, xml
+          php-version: \${{ matrix.php-version }}
+          extensions: ctype, curl, dom, fileinfo, mbstring, pdo_pgsql, pdo_sqlite, sqlite3, tokenizer, xml
           coverage: none
+
+      - name: Validate Composer configuration
+        run: composer validate --no-check-publish
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -30,8 +52,30 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
-          mkdir -p database
-          touch database/government_idss.sqlite
 
-      - name: Run automated tests
+      - name: Verify PostGIS service
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: government_idss
+          DB_USERNAME: government_idss
+          DB_PASSWORD: idss-ci-password
+        run: |
+          php -r '$pdo = new PDO("pgsql:host=".getenv("DB_HOST").";port=".getenv("DB_PORT").";dbname=".getenv("DB_DATABASE"), getenv("DB_USERNAME"), getenv("DB_PASSWORD")); echo $pdo->query("SELECT PostGIS_Version()")->fetchColumn(), PHP_EOL;'
+
+      - name: Run full migrations against PostgreSQL and PostGIS
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: government_idss
+          DB_USERNAME: government_idss
+          DB_PASSWORD: idss-ci-password
+          DB_SSLMODE: disable
+        run: php artisan migrate --force
+
+      - name: Verify application routes
+        run: php artisan route:list --except-vendor
+
+      - name: Run automated feature tests with in-memory SQLite
         run: php artisan test
