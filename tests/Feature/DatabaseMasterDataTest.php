@@ -238,4 +238,36 @@ class DatabaseMasterDataTest extends TestCase
     }
 
 
+
+    public function test_staff_account_can_be_assigned_to_organization_department_and_office(): void
+    {
+        $admin = $this->user('system_admin');
+        $organization = Organization::create(['code' => 'ORG-STAFF', 'name' => 'Staff Organization', 'is_active' => true]);
+        $department = Department::create(['organization_id' => $organization->id, 'code' => 'DEPT-STAFF', 'name' => 'Staff Department', 'is_active' => true]);
+        $office = Office::create([
+            'organization_id' => $organization->id, 'department_id' => $department->id,
+            'code' => 'OFFICE-STAFF', 'name' => 'Staff Duty Station', 'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->post(route('users.store'), [
+            'name' => 'Assigned Field Officer',
+            'email' => 'assigned-field-officer@example.test',
+            'role' => 'field_officer',
+            'mobile_number' => '0700000002',
+            'organization_id' => $organization->id,
+            'department_id' => $department->id,
+            'office_id' => $office->id,
+            'password' => 'SecurePassword123',
+            'password_confirmation' => 'SecurePassword123',
+        ])->assertRedirect(route('users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'assigned-field-officer@example.test',
+            'organization_id' => $organization->id,
+            'department_id' => $department->id,
+            'office_id' => $office->id,
+        ]);
+    }
+
+
 }
