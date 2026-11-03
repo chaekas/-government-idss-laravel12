@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ScheduledReport;
+use App\Models\GeneratedReport;
 use App\Models\User;
 use App\Services\ScheduledReportGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -84,6 +85,55 @@ class ReportWorkflowTest extends TestCase
         $this->get(route('reports.print'))->assertOk()->assertSee('Print / Save as PDF');
         $this->get(route('reports.results'))->assertOk();
         $this->get(route('reports.outbreaks'))->assertOk();
+    }
+
+    public function test_report_archive_only_shows_schedules_and_files_shared_with_the_signed_in_user(): void
+    {
+        $owner = $this->user('regional_veterinary_officer');
+        $other = $this->user('regional_veterinary_officer');
+
+        ScheduledReport::create([
+            'name' => 'Private owner schedule',
+            'report_type' => 'cases',
+            'frequency' => 'weekly',
+            'filters' => [],
+            'recipient_user_ids' => [],
+            'next_run_at' => now()->addWeek(),
+            'is_active' => true,
+            'created_by' => $owner->id,
+        ]);
+        ScheduledReport::create([
+            'name' => 'My regional schedule',
+            'report_type' => 'cases',
+            'frequency' => 'weekly',
+            'filters' => [],
+            'recipient_user_ids' => [],
+            'next_run_at' => now()->addWeek(),
+            'is_active' => true,
+            'created_by' => $other->id,
+        ]);
+
+        GeneratedReport::create([
+            'generated_by' => $owner->id,
+            'file_path' => 'reports/private-owner.csv',
+            'file_format' => 'csv',
+            'parameters' => ['report_name' => 'Private owner generated report', 'recipient_user_ids' => []],
+            'generated_at' => now(),
+        ]);
+        GeneratedReport::create([
+            'generated_by' => $other->id,
+            'file_path' => 'reports/my-regional.csv',
+            'file_format' => 'csv',
+            'parameters' => ['report_name' => 'My regional generated report', 'recipient_user_ids' => []],
+            'generated_at' => now(),
+        ]);
+
+        $this->actingAs($other)->get(route('reports.index'))
+            ->assertOk()
+            ->assertSee('My regional schedule')
+            ->assertSee('My regional generated report')
+            ->assertDontSee('Private owner schedule')
+            ->assertDontSee('Private owner generated report');
     }
 
     public function test_non_leadership_staff_cannot_open_reports(): void
