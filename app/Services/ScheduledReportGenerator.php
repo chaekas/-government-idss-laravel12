@@ -64,7 +64,7 @@ class ScheduledReportGenerator
 
         $path = 'reports/scheduled/'.$schedule->id.'/'.now()->format('Ymd-His').'-'.Str::lower(Str::random(5)).'.csv';
         if (!Storage::disk('local')->put($path, $contents)) {
-            throw new \\RuntimeException('Could not persist the generated report to private storage.');
+            throw new \RuntimeException('Could not persist the generated report to private storage.');
         }
 
         $report = GeneratedReport::create([
@@ -119,7 +119,7 @@ class ScheduledReportGenerator
     private function writeSamples($stream, array $filters, User $scopeUser): void
     {
         fputcsv($stream, ['Sample ID','Case ID','Sample type','Laboratory','Collection date','Transport status','Quality status','Test status','Released at']);
-        $query = $this->applyDates(app(UserDataScope::class)->samples(Sample::with(['diseaseCase','laboratory'])->orderBy('created_at'), $this->scopeUser), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->samples(Sample::with(['diseaseCase','laboratory'])->orderBy('created_at'), $scopeUser), $filters);
         foreach ($query->cursor() as $sample) {
             fputcsv($stream, [$sample->sample_code,$sample->diseaseCase?->case_code,$sample->sample_type,$sample->laboratory?->name,$sample->collection_date?->toDateString(),$sample->transport_status,$sample->quality_status,$sample->test_status,$sample->released_at?->toDateTimeString()]);
         }
@@ -128,7 +128,7 @@ class ScheduledReportGenerator
     private function writeResults($stream, array $filters, User $scopeUser): void
     {
         fputcsv($stream, ['Result ID','Sample ID','Laboratory','Diagnostic test','Method','Finding','Status','Tested at','Reviewed at']);
-        $query = $this->applyDates(app(UserDataScope::class)->laboratoryResults(LaboratoryTestResult::with(['sample','laboratory','testMethod'])->orderBy('created_at'), $this->scopeUser), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->laboratoryResults(LaboratoryTestResult::with(['sample','laboratory','testMethod'])->orderBy('created_at'), $scopeUser), $filters);
         foreach ($query->cursor() as $result) {
             $finding = $result->qualitative_result ?: ($result->numeric_result !== null ? $result->numeric_result.' '.$result->numeric_unit : $result->observations);
             fputcsv($stream, [$result->result_code,$result->sample?->sample_code,$result->laboratory?->name,$result->test_name,$result->testMethod?->name ?: $result->method,$finding,$result->status,$result->tested_at?->toDateTimeString(),$result->approved_at?->toDateTimeString()]);
@@ -138,7 +138,7 @@ class ScheduledReportGenerator
     private function writeOutbreaks($stream, array $filters, User $scopeUser): void
     {
         fputcsv($stream, ['Outbreak ID','Disease','Region','District','Start date','Cases','Deaths','Severity','Status']);
-        $query = $this->applyDates(app(UserDataScope::class)->outbreaks(Outbreak::orderBy('created_at'), $this->scopeUser), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->outbreaks(Outbreak::orderBy('created_at'), $scopeUser), $filters);
         foreach ($query->cursor() as $outbreak) {
             fputcsv($stream, [$outbreak->outbreak_code,$outbreak->disease_name,$outbreak->region,$outbreak->district,$outbreak->start_date?->toDateString(),$outbreak->cases_count,$outbreak->deaths_count,$outbreak->severity,$outbreak->status]);
         }
