@@ -15,6 +15,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use App\Services\UserDataScope;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -33,6 +34,34 @@ class ReportsController extends Controller
         if (!empty($filters['from'])) $query->whereDate('created_at', '>=', $filters['from']);
         if (!empty($filters['to'])) $query->whereDate('created_at', '<=', $filters['to']);
         return $query;
+    }
+
+    private function isReportAdministrator(User $user): bool
+    {
+        return $user->hasRole(['system_admin','super_admin','super-admin','administrator','admin']);
+    }
+
+    private function canReceiveScheduledReport(User $creator, User $recipient): bool
+    {
+        if (!$recipient->is_active || !$recipient->hasRole(['regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'])) {
+            return false;
+        }
+
+        $nationalRoles = ['mlf_officer','system_admin','super_admin','super-admin','administrator','admin'];
+        if ($creator->hasRole($nationalRoles)) {
+            return $recipient->hasRole($nationalRoles);
+        }
+
+        if ($creator->hasRole('regional_veterinary_officer')) {
+            if ($recipient->hasRole($nationalRoles)) return true;
+
+            return count(array_intersect(
+                $creator->accessibleAdministrativeAreaIds(),
+                $recipient->accessibleAdministrativeAreaIds()
+            )) > 0;
+        }
+
+        return false;
     }
 
     public function index(Request $request)
@@ -56,8 +85,12 @@ class ReportsController extends Controller
             'sampleCount' => (clone $samples)->count(),
             'pendingResultCount' => (clone $results)->where('status', 'submitted_for_review')->count(),
             'outbreakCount' => (clone $outbreaks)->whereIn('status', ['suspected', 'active'])->count(),
-            'scheduledReports' => ScheduledReport::with('creator')->latest()->paginate(10, ['*'], 'schedules_page'),
-            'generatedReports' => GeneratedReport::with('definition')->latest('generated_at')->paginate(10, ['*'], 'generated_page'),
+            'scheduledReports' => ScheduledReport::with('creator')
+                ->when(!$this->isReportAdministrator($request->user()), fn ($query) => $query->where(fn ($visible) => $visible->where('created_by', $request->user()->id)->orWhereJsonContains('recipient_user_ids', $request->user()->id)))
+                ->latest()->paginate(10, ['*'], 'schedules_page'),
+            'generatedReports' => GeneratedReport::with('definition')
+                ->when(!$this->isReportAdministrator($request->user()), fn ($query) => $query->where(fn ($visible) => $visible->where('generated_by', $request->user()->id)->orWhereJsonContains('parameters->recipient_user_ids', $request->user()->id)))
+                ->latest('generated_at')->paginate(10, ['*'], 'generated_page'),
             'recipients' => User::where('is_active', true)->whereIn('role', ['regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'])->orderBy('name')->get(),
         ]);
     }
@@ -152,6 +185,17 @@ class ReportsController extends Controller
             'recipient_user_ids' => ['required','array','min:1'],
             'recipient_user_ids.*' => ['required','integer','distinct','exists:users,id'],
         ]);
+
+        $recipients = User::whereIn('id', $data['recipient_user_ids'])->get()->keyBy('id');
+        foreach ($data['recipient_user_ids'] as $recipientId) {
+            $recipient = $recipients->get((int) $recipientId);
+            if (!$recipient || !$this->canReceiveScheduledReport($request->user(), $recipient)) {
+                throw ValidationException::withMessages([
+                    'recipient_user_ids' => 'Recipients must be active leadership users authorized for the report creator’s national or overlapping geographic scope.',
+                ]);
+            }
+        }
+
         $filters = array_filter(['from' => $data['from'] ?? null, 'to' => $data['to'] ?? null]);
         $next = match ($data['frequency']) {
             'daily' => now()->addDay()->startOfDay(),
@@ -181,7 +225,7 @@ class ReportsController extends Controller
     public function download(Request $request, GeneratedReport $report)
     {
         $recipients = $report->parameters['recipient_user_ids'] ?? [];
-        $isAdmin = in_array($request->user()->role, ['system_admin','super_admin','super-admin','administrator','admin'], true);
+        $isAdmin = $this->isReportAdministrator($request->user());
         abort_unless($isAdmin || (int) $report->generated_by === (int) $request->user()->id || in_array($request->user()->id, $recipients), 403);
         abort_unless(Storage::disk('local')->exists($report->file_path), 404);
 
