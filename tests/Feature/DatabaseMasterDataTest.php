@@ -245,6 +245,7 @@ class DatabaseMasterDataTest extends TestCase
         $admin = $this->user('system_admin');
         $organization = Organization::create(['code' => 'ORG-STAFF', 'name' => 'Staff Organization', 'is_active' => true]);
         $department = Department::create(['organization_id' => $organization->id, 'code' => 'DEPT-STAFF', 'name' => 'Staff Department', 'is_active' => true]);
+        $area = AdministrativeArea::create(['code' => 'AREA-STAFF', 'name' => 'Staff Region', 'area_type' => 'region', 'is_active' => true]);
         $office = Office::create([
             'organization_id' => $organization->id, 'department_id' => $department->id,
             'code' => 'OFFICE-STAFF', 'name' => 'Staff Duty Station', 'is_active' => true,
@@ -258,6 +259,7 @@ class DatabaseMasterDataTest extends TestCase
             'organization_id' => $organization->id,
             'department_id' => $department->id,
             'office_id' => $office->id,
+            'administrative_area_ids' => [$area->id],
             'password' => 'SecurePassword123',
             'password_confirmation' => 'SecurePassword123',
         ])->assertRedirect(route('users.index'));
@@ -269,6 +271,7 @@ class DatabaseMasterDataTest extends TestCase
             'office_id' => $office->id,
         ]);
         $staff = User::where('email', 'assigned-field-officer@example.test')->firstOrFail();
+        $this->assertDatabaseHas('user_administrative_area', ['user_id' => $staff->id, 'administrative_area_id' => $area->id, 'effective_to' => null]);
         $this->assertDatabaseHas('role_user', [
             'user_id' => $staff->id,
             'role_id' => Role::where('name', 'field_officer')->value('id'),
