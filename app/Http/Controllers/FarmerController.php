@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Farmer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class FarmerController extends Controller
@@ -77,4 +78,62 @@ class FarmerController extends Controller
 
         return redirect()->route('farmers.index')->with('status', 'Farmer registered successfully. Farmer ID: '.$farmer->farmer_code);
     }
+
+    public function edit(Farmer $farmer)
+    {
+        return view('farmers.create', compact('farmer'));
+    }
+
+    public function update(Request $request, Farmer $farmer)
+    {
+        $data = $request->validate([
+            'full_name' => ['required', 'string', 'max:160'],
+            'sex' => ['nullable', 'string', 'max:30'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
+            'nationality' => ['nullable', 'string', 'max:100'],
+            'phone' => ['required', 'string', 'max:40'],
+            'email' => ['nullable', 'email', 'max:160'],
+            'national_id' => ['nullable', 'string', 'max:100', Rule::unique('farmers', 'national_id')->ignore($farmer->id)],
+            'region' => ['required', 'string', 'max:100'],
+            'district' => ['required', 'string', 'max:100'],
+            'ward' => ['nullable', 'string', 'max:100'],
+            'village' => ['nullable', 'string', 'max:100'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'status' => ['required', 'in:active,inactive,deceased,suspended'],
+        ]);
+
+        $duplicate = Farmer::whereRaw('LOWER(full_name) = ?', [mb_strtolower($data['full_name'])])
+            ->where('phone', $data['phone'])->whereKeyNot($farmer->id)->first();
+        if ($duplicate) {
+            throw ValidationException::withMessages([
+                'phone' => 'Another farmer with the same name and mobile number exists ('.$duplicate->farmer_code.'). Verify the identity before updating.',
+            ]);
+        }
+
+        $data['modified_by'] = $request->user()->id;
+        $farmer->update($data);
+        AuditLog::create([
+            'user_id' => $request->user()->id, 'action' => 'farmer.updated',
+            'entity_type' => 'farmer', 'entity_id' => (string) $farmer->id,
+            'ip_address' => $request->ip(), 'description' => 'Updated farmer '.$farmer->farmer_code,
+            'created_at' => now(),
+        ]);
+
+        return redirect()->route('farmers.index')->with('status', 'Farmer record updated.');
+    }
+
+    public function destroy(Request $request, Farmer $farmer)
+    {
+        abort_unless(in_array($request->user()->role, ['system_admin','super_admin','super-admin','administrator','admin','regional_veterinary_officer'], true), 403);
+        $farmer->update(['status' => 'inactive', 'archived_at' => now(), 'modified_by' => $request->user()->id]);
+        AuditLog::create([
+            'user_id' => $request->user()->id, 'action' => 'farmer.archived',
+            'entity_type' => 'farmer', 'entity_id' => (string) $farmer->id,
+            'ip_address' => $request->ip(), 'description' => 'Archived farmer '.$farmer->farmer_code,
+            'created_at' => now(),
+        ]);
+        return redirect()->route('farmers.index')->with('status', 'Farmer archived; historical farm and case records were preserved.');
+    }
+
+
 }
