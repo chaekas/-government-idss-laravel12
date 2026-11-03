@@ -14,3 +14,5 @@
 
 # Never commit private database backups or operational logs.
 /storage/app/private/backups/
+Government-IDSS-Laravel12.zip
+/storage/framework/testing/
