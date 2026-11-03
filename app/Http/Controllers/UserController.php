@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Department;
+use App\Models\Office;
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,16 +19,42 @@ class UserController extends Controller
         return array_values(array_diff(array_keys(config('idss.roles')), ['farmer']));
     }
 
+    private function assignmentOptions(): array
+    {
+        return [
+            'organizations' => Organization::where('is_active', true)->orderBy('name')->get(),
+            'departments' => Department::where('is_active', true)->orderBy('name')->get(),
+            'offices' => Office::where('is_active', true)->orderBy('name')->get(),
+        ];
+    }
+
+    private function validateAssignmentHierarchy(array $data): void
+    {
+        if (!empty($data['department_id']) && !empty($data['organization_id'])) {
+            abort_unless(Department::whereKey($data['department_id'])->where('organization_id', $data['organization_id'])->exists(), 422, 'The selected department does not belong to the selected organization.');
+        }
+        if (!empty($data['office_id'])) {
+            $office = Office::findOrFail($data['office_id']);
+            if (!empty($data['organization_id'])) {
+                abort_unless((int) $office->organization_id === (int) $data['organization_id'], 422, 'The selected office does not belong to the selected organization.');
+            }
+            if (!empty($data['department_id'])) {
+                abort_unless((int) $office->department_id === (int) $data['department_id'], 422, 'The selected office does not belong to the selected department.');
+            }
+        }
+    }
+
     public function index()
     {
         return view('users.index', [
-            'users' => User::where('role', '<>', 'farmer')->orderBy('name')->paginate(20),
+            'users' => User::with(['organization', 'department', 'office'])->where('role', '<>', 'farmer')->orderBy('name')->paginate(20),
+            ...$this->assignmentOptions(),
         ]);
     }
 
     public function create()
     {
-        return view('users.create', ['roles' => $this->staffRoles()]);
+        return view('users.create', ['roles' => $this->staffRoles(), ...$this->assignmentOptions()]);
     }
 
     public function store(Request $request)
@@ -35,7 +64,12 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:180', 'unique:users,email'],
             'role' => ['required', Rule::in($this->staffRoles())],
             'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()],
+            'mobile_number' => ['nullable', 'string', 'max:40'],
+            'organization_id' => ['nullable', 'exists:organizations,id'],
+            'department_id' => ['nullable', 'exists:departments,id'],
+            'office_id' => ['nullable', 'exists:offices,id'],
         ]);
+        $this->validateAssignmentHierarchy($data);
 
         $data['is_active'] = true;
         $user = User::create($data);
@@ -56,7 +90,12 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:180', 'unique:users,email,'.$user->id],
             'role' => ['required', Rule::in($allowedRoles)],
             'is_active' => ['required', 'boolean'],
+            'mobile_number' => ['nullable', 'string', 'max:40'],
+            'organization_id' => ['nullable', 'exists:organizations,id'],
+            'department_id' => ['nullable', 'exists:departments,id'],
+            'office_id' => ['nullable', 'exists:offices,id'],
         ]);
+        $this->validateAssignmentHierarchy($data);
 
         $isAdministratorAccount = in_array($user->role, $adminRoleAliases, true);
         if ($user->is($request->user()) && (!in_array($data['role'], $adminRoleAliases, true) || !$request->boolean('is_active'))) {
