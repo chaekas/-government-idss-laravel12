@@ -13,10 +13,10 @@ use App\Models\User;
 use App\Services\UserDataScope;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class ScheduledReportGenerator
 {
-    private ?User $scopeUser = null;
     public function runDue(): int
     {
         $count = 0;
@@ -25,8 +25,16 @@ class ScheduledReportGenerator
             ->orderBy('next_run_at')
             ->get()
             ->each(function (ScheduledReport $schedule) use (&$count) {
-                $this->generate($schedule);
-                $count++;
+                try {
+                    $this->generate($schedule);
+                    $count++;
+                } catch (\Throwable $exception) {
+                    Log::error('IDSS scheduled report generation failed.', [
+                        'schedule_id' => $schedule->id,
+                        'report_type' => $schedule->report_type,
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
             });
 
         return $count;
@@ -34,17 +42,20 @@ class ScheduledReportGenerator
 
     public function generate(ScheduledReport $schedule): GeneratedReport
     {
-        $this->scopeUser = $schedule->creator;
-        if (!$this->scopeUser) { throw new \RuntimeException('Scheduled report creator no longer exists; refusing to generate an unscoped report.'); }
+        $scopeUser = $schedule->creator;
+        if (!$scopeUser) {
+            throw new \RuntimeException('Scheduled report creator no longer exists; refusing to generate an unscoped report.');
+        }
         $filters = $schedule->filters ?? [];
         $stream = fopen('php://temp', 'w+');
         fwrite($stream, "\xEF\xBB\xBF");
 
         match ($schedule->report_type) {
-            'cases' => $this->writeCases($stream, $filters),
-            'samples' => $this->writeSamples($stream, $filters),
-            'results' => $this->writeResults($stream, $filters),
-            'outbreaks' => $this->writeOutbreaks($stream, $filters),
+            'cases' => $this->writeCases($stream, $filters, $scopeUser),
+            'samples' => $this->writeSamples($stream, $filters, $scopeUser),
+            'results' => $this->writeResults($stream, $filters, $scopeUser),
+            'outbreaks' => $this->writeOutbreaks($stream, $filters, $scopeUser),
+            default => throw new \InvalidArgumentException('Unsupported scheduled report type: '.$schedule->report_type),
         };
 
         rewind($stream);
@@ -52,7 +63,9 @@ class ScheduledReportGenerator
         fclose($stream);
 
         $path = 'reports/scheduled/'.$schedule->id.'/'.now()->format('Ymd-His').'-'.Str::lower(Str::random(5)).'.csv';
-        Storage::disk('local')->put($path, $contents);
+        if (!Storage::disk('local')->put($path, $contents)) {
+            throw new \\RuntimeException('Could not persist the generated report to private storage.');
+        }
 
         $report = GeneratedReport::create([
             'report_definition_id' => null,
@@ -94,16 +107,16 @@ class ScheduledReportGenerator
         return $query;
     }
 
-    private function writeCases($stream, array $filters): void
+    private function writeCases($stream, array $filters, User $scopeUser): void
     {
         fputcsv($stream, ['Case ID','Farm ID','Farm','Region','District','Suspected disease','Date observed','Severity','Status','Reported at']);
-        $query = $this->applyDates(app(UserDataScope::class)->cases(DiseaseCase::with('farm')->orderBy('created_at'), $this->scopeUser), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->cases(DiseaseCase::with('farm')->orderBy('created_at'), $scopeUser), $filters);
         foreach ($query->cursor() as $case) {
             fputcsv($stream, [$case->case_code,$case->farm?->farm_code,$case->farm?->name,$case->farm?->region,$case->farm?->district,$case->disease_suspected,$case->date_observed?->toDateString(),$case->severity,$case->status,$case->created_at?->toDateTimeString()]);
         }
     }
 
-    private function writeSamples($stream, array $filters): void
+    private function writeSamples($stream, array $filters, User $scopeUser): void
     {
         fputcsv($stream, ['Sample ID','Case ID','Sample type','Laboratory','Collection date','Transport status','Quality status','Test status','Released at']);
         $query = $this->applyDates(app(UserDataScope::class)->samples(Sample::with(['diseaseCase','laboratory'])->orderBy('created_at'), $this->scopeUser), $filters);
@@ -112,7 +125,7 @@ class ScheduledReportGenerator
         }
     }
 
-    private function writeResults($stream, array $filters): void
+    private function writeResults($stream, array $filters, User $scopeUser): void
     {
         fputcsv($stream, ['Result ID','Sample ID','Laboratory','Diagnostic test','Method','Finding','Status','Tested at','Reviewed at']);
         $query = $this->applyDates(app(UserDataScope::class)->laboratoryResults(LaboratoryTestResult::with(['sample','laboratory','testMethod'])->orderBy('created_at'), $this->scopeUser), $filters);
@@ -122,7 +135,7 @@ class ScheduledReportGenerator
         }
     }
 
-    private function writeOutbreaks($stream, array $filters): void
+    private function writeOutbreaks($stream, array $filters, User $scopeUser): void
     {
         fputcsv($stream, ['Outbreak ID','Disease','Region','District','Start date','Cases','Deaths','Severity','Status']);
         $query = $this->applyDates(app(UserDataScope::class)->outbreaks(Outbreak::orderBy('created_at'), $this->scopeUser), $filters);
