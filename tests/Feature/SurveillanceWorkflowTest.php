@@ -288,6 +288,11 @@ class SurveillanceWorkflowTest extends TestCase
             'district' => 'Dodoma',
             'is_active' => true,
         ]);
+        $catalogueTest = LaboratoryTest::create([
+            'code' => 'GUARD-PCR-'.Str::upper(Str::random(4)),
+            'name' => 'Newcastle disease PCR',
+            'is_active' => true,
+        ]);
 
         $this->actingAs($officer)->post(route('samples.store'), [
             'disease_case_id' => $case->id,
@@ -303,6 +308,7 @@ class SurveillanceWorkflowTest extends TestCase
             'manager' => $manager,
             'case' => $case,
             'laboratory' => $laboratory,
+            'catalogueTest' => $catalogueTest,
             'sample' => Sample::where('disease_case_id', $case->id)->firstOrFail(),
         ];
     }
@@ -389,15 +395,14 @@ class SurveillanceWorkflowTest extends TestCase
         $this->actingAs($manager)->put(route('samples.assign', $sample), [
             'laboratory_section' => 'Virology',
             'assigned_technician' => $technician->id,
+            'laboratory_test_ids' => [$flow['catalogueTest']->id],
         ])->assertRedirect(route('samples.index'));
+        $assignment = LaboratoryTestAssignment::where('sample_id', $sample->id)->firstOrFail();
         $this->actingAs($technician)->put(route('samples.update', $sample), [
             'event_type' => 'testing_started',
         ])->assertRedirect(route('samples.index'));
         $this->actingAs($technician)->post(route('laboratory.store'), [
-            'sample_id' => $sample->id,
-            'laboratory_id' => $laboratory->id,
-            'test_name' => 'Newcastle disease PCR',
-            'method' => 'PCR',
+            'laboratory_test_assignment_id' => $assignment->id,
             'qualitative_result' => 'Positive',
         ])->assertRedirect(route('laboratory.index'));
 
