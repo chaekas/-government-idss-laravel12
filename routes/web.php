@@ -11,6 +11,7 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\FarmerController;
 use App\Http\Controllers\InvestigationController;
 use App\Http\Controllers\LaboratoryController;
+use App\Http\Controllers\LaboratoryOperationsController;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\LaboratoryResultController;
 use App\Http\Controllers\OutbreakController;
@@ -99,6 +100,17 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('role:laboratory_manager,zonal_laboratory_administrator,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::put('/samples/{sample}/assign', [SampleController::class, 'assign'])->name('samples.assign');
+    });
+
+    // Laboratory quality management, equipment, calibration and corrective actions.
+    Route::middleware('role:laboratory_manager,zonal_laboratory_administrator,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
+        Route::get('/laboratory/operations', [LaboratoryOperationsController::class, 'index'])->name('laboratory.operations');
+        Route::post('/laboratory/operations/sections', [LaboratoryOperationsController::class, 'storeSection'])->name('laboratory.sections.store');
+        Route::post('/laboratory/operations/equipment', [LaboratoryOperationsController::class, 'storeEquipment'])->name('laboratory.equipment.store');
+        Route::put('/laboratory/operations/equipment/{equipment}', [LaboratoryOperationsController::class, 'updateEquipment'])->name('laboratory.equipment.update');
+        Route::post('/laboratory/operations/equipment/{equipment}/calibrations', [LaboratoryOperationsController::class, 'recordCalibration'])->name('laboratory.equipment.calibrations.store');
+        Route::post('/laboratory/operations/quality-control', [LaboratoryOperationsController::class, 'recordQualityControl'])->name('laboratory.quality-control.store');
+        Route::put('/laboratory/operations/corrective-actions/{action}', [LaboratoryOperationsController::class, 'updateCorrectiveAction'])->name('laboratory.corrective-actions.update');
     });
 
     // Laboratory registry administration.
