@@ -22,3 +22,6 @@ Artisan::command('idss:process-integrations', function (IntegrationOutboxService
 })->purpose('Process approved outbound integration events');
 
 Schedule::command('idss:process-integrations')->everyMinute()->withoutOverlapping();
+
+// Private, integrity-checked database backup. Configure the scheduler in production.
+Schedule::command('idss:backup')->dailyAt(env('IDSS_BACKUP_TIME', '02:00'))->withoutOverlapping();
