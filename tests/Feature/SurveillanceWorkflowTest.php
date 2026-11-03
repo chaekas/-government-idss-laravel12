@@ -64,6 +64,24 @@ class SurveillanceWorkflowTest extends TestCase
         $this->actingAs($this->makeUser('system_admin'));
         $this->get(route('users.index'))->assertOk();
     }
+    public function test_lab_manager_cannot_assign_a_sample_to_a_technician_outside_its_laboratory(): void
+    {
+        $fixture = $this->makeSampleWorkflowFixture();
+        $otherTechnician = $this->makeUser('laboratory_technician');
+        $fixture['sample']->update(['transport_status' => 'received', 'quality_status' => 'accepted']);
+
+        $this->actingAs($fixture['manager'])->put(route('samples.assign', $fixture['sample']), [
+            'laboratory_section' => 'Virology',
+            'assigned_technician' => $otherTechnician->id,
+            'laboratory_test_ids' => [$fixture['catalogueTest']->id],
+        ])->assertSessionHasErrors('assigned_technician');
+
+        $this->assertDatabaseMissing('laboratory_test_assignments', [
+            'sample_id' => $fixture['sample']->id,
+            'assigned_technician' => $otherTechnician->id,
+        ]);
+    }
+
     public function test_sample_moves_from_field_collection_through_lab_review_to_final_release(): void
     {
         $officer = $this->makeUser('field_officer');
