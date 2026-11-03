@@ -77,5 +77,21 @@ jobs:
       - name: Verify application routes
         run: php artisan route:list --except-vendor
 
+      - name: Install PostgreSQL backup utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create and verify PostgreSQL backup
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: government_idss
+          DB_USERNAME: government_idss
+          DB_PASSWORD: idss-ci-password
+          DB_SSLMODE: disable
+        run: php artisan idss:backup --keep-days=1
+
       - name: Run automated feature tests with in-memory SQLite
         run: php artisan test
