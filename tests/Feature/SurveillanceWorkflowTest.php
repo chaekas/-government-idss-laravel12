@@ -7,6 +7,9 @@ use App\Models\Farm;
 use App\Models\Farmer;
 use App\Models\Investigation;
 use App\Models\Laboratory;
+use App\Models\LaboratoryTest;
+use App\Models\LaboratoryTestAssignment;
+use App\Models\TestMethod;
 use App\Models\LaboratoryTestResult;
 use App\Models\Sample;
 use App\Models\SampleMovement;
@@ -112,6 +115,16 @@ class SurveillanceWorkflowTest extends TestCase
             'district' => 'Dodoma',
             'is_active' => true,
         ]);
+        $catalogueTest = LaboratoryTest::create([
+            'code' => 'NDV-PCR-'.Str::upper(Str::random(4)),
+            'name' => 'Newcastle disease PCR',
+            'is_active' => true,
+        ]);
+        $testMethod = TestMethod::create([
+            'code' => 'PCR-'.Str::upper(Str::random(4)),
+            'name' => 'Polymerase chain reaction',
+            'is_active' => true,
+        ]);
 
         $this->actingAs($officer)->post(route('samples.store'), [
             'disease_case_id' => $case->id,
@@ -157,7 +170,10 @@ class SurveillanceWorkflowTest extends TestCase
         $this->actingAs($manager)->put(route('samples.assign', $sample), [
             'laboratory_section' => 'Virology',
             'assigned_technician' => $technician->id,
+            'laboratory_test_ids' => [$catalogueTest->id],
         ])->assertRedirect(route('samples.index'));
+        $assignment = LaboratoryTestAssignment::where('sample_id', $sample->id)->where('laboratory_test_id', $catalogueTest->id)->firstOrFail();
+        $this->assertSame('assigned', $assignment->status);
         $this->assertSame($technician->id, $sample->fresh()->assigned_technician);
 
         $this->actingAs($technician)->put(route('samples.update', $sample), [
@@ -167,10 +183,8 @@ class SurveillanceWorkflowTest extends TestCase
         $this->assertSame('in_progress', $sample->fresh()->test_status);
 
         $this->actingAs($technician)->post(route('laboratory.store'), [
-            'sample_id' => $sample->id,
-            'laboratory_id' => $laboratory->id,
-            'test_name' => 'Newcastle disease PCR',
-            'method' => 'PCR',
+            'laboratory_test_assignment_id' => $assignment->id,
+            'test_method_id' => $testMethod->id,
             'observations' => 'Viral target detected',
             'qualitative_result' => 'Positive',
             'technician_comments' => 'Controls passed.',
@@ -178,6 +192,9 @@ class SurveillanceWorkflowTest extends TestCase
 
         $result = LaboratoryTestResult::where('sample_id', $sample->id)->firstOrFail();
         $this->assertSame('submitted_for_review', $result->status);
+        $this->assertSame($catalogueTest->id, $result->laboratory_test_id);
+        $this->assertSame($testMethod->id, $result->test_method_id);
+        $this->assertSame('submitted_for_review', $assignment->fresh()->status);
 
         $this->actingAs($manager)->put(route('laboratory.approve', $result), [
             'decision' => 'approve',
@@ -185,6 +202,7 @@ class SurveillanceWorkflowTest extends TestCase
         ])->assertRedirect(route('laboratory.index'));
 
         $this->assertSame('approved', $result->fresh()->status);
+        $this->assertSame('approved', $assignment->fresh()->status);
         $this->assertSame('approved', $sample->fresh()->test_status);
         $this->assertNotNull($sample->fresh()->released_at);
         $this->assertSame('confirmed', $case->fresh()->status);
