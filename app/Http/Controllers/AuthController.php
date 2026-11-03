@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Farmer;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,6 +53,8 @@ class AuthController extends Controller
                 'is_active' => true,
                 'farmer_id' => $farmer->id,
             ]);
+            if ($role = Role::where('name', 'farmer')->first()) { $user->roles()->sync([$role->id]); }
+            return $user;
         });
 
         Auth::login($user);
