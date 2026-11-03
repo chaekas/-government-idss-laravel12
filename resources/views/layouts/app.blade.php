@@ -45,6 +45,9 @@
             @if($isAdmin || in_array($role, ['mlf_officer','zonal_laboratory_administrator'], true))
                 <a class="{{ request()->routeIs('laboratories.*')?'active':'' }}" href="{{ route('laboratories.index') }}">▣ Laboratory registry</a>
             @endif
+            @if($isAdmin || in_array($role, ['laboratory_manager','zonal_laboratory_administrator'], true))
+                <a class="{{ request()->routeIs('laboratory.operations')?'active':'' }}" href="{{ route('laboratory.operations') }}">⚙ Laboratory quality & equipment</a>
+            @endif
 
             @if($isAdmin || in_array($role, ['field_officer','regional_veterinary_officer','mlf_officer'], true))
                 <a class="{{ request()->routeIs('outbreaks.*')?'active':'' }}" href="{{ route('outbreaks.index') }}">◉ Outbreaks</a>
