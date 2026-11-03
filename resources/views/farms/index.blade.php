@@ -5,8 +5,8 @@
 <section class="panel"><form method="GET" class="toolbar"><input name="q" value="{{ request('q') }}" placeholder="Search Farm ID, name, owner or location"><button class="button secondary" type="submit">Search</button></form>
 <div class="panel-head"><div><h2>Registered farms</h2><p>{{ $farms->total() }} records</p></div></div>
 @if($farms->isEmpty())<div class="empty"><b>No farms registered</b><p>Register a farmer before registering a farm.</p><a class="button primary" href="{{ route('farms.create') }}">Register farm</a></div>@else
-<div class="table-wrap"><table><thead><tr><th>Farm ID</th><th>Farm name</th><th>Farm type</th><th>Owner</th><th>Region</th><th>District</th><th>Bird count</th></tr></thead><tbody>
-@foreach($farms as $farm)<tr><td>{{ $farm->farm_code }}</td><td><b>{{ $farm->name }}</b></td><td>{{ $farm->farmType?->name ?? '—' }}</td><td>{{ $farm->farmer?->full_name ?? '—' }}</td><td>{{ $farm->region }}</td><td>{{ $farm->district }}</td><td>{{ number_format($farm->bird_count) }}</td></tr>@endforeach
+<div class="table-wrap"><table><thead><tr><th>Farm ID</th><th>Farm name</th><th>Farm type</th><th>Owner</th><th>Region</th><th>District</th><th>Bird count</th><th>Actions</th></tr></thead><tbody>
+@foreach($farms as $farm)<tr><td>{{ $farm->farm_code }}</td><td><b>{{ $farm->name }}</b></td><td>{{ $farm->farmType?->name ?? '—' }}</td><td>{{ $farm->farmer?->full_name ?? '—' }}</td><td>{{ $farm->region }}</td><td>{{ $farm->district }}</td><td>{{ number_format($farm->bird_count) }}</td><td class="actions"><a href="{{ route('farms.edit', $farm) }}">Edit</a>@if(in_array(auth()->user()->role, ['system_admin','super_admin','super-admin','administrator','admin','regional_veterinary_officer'], true) && !$farm->archived_at)<form method="POST" action="{{ route('farms.destroy', $farm) }}" onsubmit="return confirm('Archive this farm? Associated animal and case records will be retained.')">@csrf @method('DELETE')<button class="link-danger" type="submit">Archive</button></form>@endif</td></tr>@endforeach
 </tbody></table></div><div class="pagination">{{ $farms->links() }}</div>@endif
 </section>
 @endsection
