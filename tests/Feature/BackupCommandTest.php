@@ -16,6 +16,7 @@ class BackupCommandTest extends TestCase
         $source = storage_path('framework/testing/idss-backup-source-'.uniqid('', true).'.sqlite');
         $backupDirectory = storage_path('framework/testing/idss-backups-'.uniqid('', true));
         File::ensureDirectoryExists(dirname($source));
+        touch($source);
 
         $originalDefault = config('database.default');
         $originalSqlite = config('database.connections.sqlite.database');
