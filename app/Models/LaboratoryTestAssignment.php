@@ -8,4 +8,6 @@ class LaboratoryTestAssignment extends Model {
  public function sample(): BelongsTo { return $this->belongsTo(Sample::class); }
  public function test(): BelongsTo { return $this->belongsTo(LaboratoryTest::class,'laboratory_test_id'); }
  public function laboratory(): BelongsTo { return $this->belongsTo(Laboratory::class); }
+ public function results(): \Illuminate\Database\Eloquent\Relations\HasMany { return $this->hasMany(LaboratoryTestResult::class, 'laboratory_test_assignment_id'); }
+ public function technician(): BelongsTo { return $this->belongsTo(User::class, 'assigned_technician'); }
 }
