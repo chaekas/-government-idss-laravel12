@@ -356,6 +356,7 @@ class SurveillanceWorkflowTest extends TestCase
         $this->actingAs($flow['manager'])->put(route('samples.assign', $sample), [
             'laboratory_section' => 'Virology',
             'assigned_technician' => $technician->id,
+            'laboratory_test_ids' => [$flow['catalogueTest']->id],
         ])->assertSessionHasErrors('assigned_technician');
 
         $this->actingAs($technician)->get(route('laboratory.create'))
