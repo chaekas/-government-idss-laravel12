@@ -66,6 +66,7 @@
                 <a class="{{ request()->routeIs('master-data.*')?'active':'' }}" href="{{ route('master-data.index', 'farm-types') }}">▧ Master data</a>
                 <a class="{{ request()->route('type') === 'surveillance-alert-rules' ? 'active' : '' }}" href="{{ route('master-data.index', 'surveillance-alert-rules') }}">⚑ Alert thresholds</a>
                 <a class="{{ request()->routeIs('audit.*')?'active':'' }}" href="{{ route('audit.index') }}">▤ Audit trail</a>
+                <a class="{{ request()->routeIs('integrations.*')?'active':'' }}" href="{{ route('integrations.index') }}">⇄ Government integrations</a>
             @endif
         </nav>
         <div class="side-foot">● Surveillance workspace</div>
