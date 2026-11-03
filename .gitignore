@@ -11,3 +11,6 @@
 !.env.example
 .phpunit.cache
 .DS_Store
+
+# Never commit private database backups or operational logs.
+/storage/app/private/backups/
