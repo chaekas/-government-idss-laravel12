@@ -71,7 +71,7 @@ class FarmerController extends Controller
         $farmer = Farmer::create(collect($data)->except('administrative_area_id')->all());
         $farmer->contacts()->create(['contact_type' => 'phone', 'contact_value' => $data['phone'], 'is_primary' => true]);
         if (!empty($data['email'])) {
-            $farmer->contacts()->create(['contact_type' => 'email', 'contact_value' => $data['email'], 'is_primary' => false]);
+            $farmer->contacts()->create(['contact_type' => 'email', 'contact_value' => $data['email'], 'is_primary' => true]);
         }
         $farmer->addresses()->create([
             'administrative_area_id' => $data['administrative_area_id'] ?? null,
