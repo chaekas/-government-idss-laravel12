@@ -159,4 +159,83 @@ class DatabaseMasterDataTest extends TestCase
     }
 
 
+
+    public function test_farmer_profile_can_be_updated_and_archived_without_deleting_history(): void
+    {
+        $admin = $this->user('system_admin');
+        $farmer = Farmer::create([
+            'farmer_code' => 'FRM-PH1-EDIT',
+            'full_name' => 'Original Farmer',
+            'phone' => '0700000001',
+            'region' => 'Dodoma',
+            'district' => 'Kondoa',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)->put(route('farmers.update', $farmer), [
+            'full_name' => 'Updated Farmer',
+            'phone' => '0700000001',
+            'region' => 'Dodoma',
+            'district' => 'Kondoa',
+            'status' => 'active',
+        ])->assertRedirect(route('farmers.index'));
+
+        $this->assertSame('Updated Farmer', $farmer->fresh()->full_name);
+        $this->delete(route('farmers.destroy', $farmer))->assertRedirect(route('farmers.index'));
+        $this->assertSame('inactive', $farmer->fresh()->status);
+        $this->assertNotNull($farmer->fresh()->archived_at);
+    }
+
+    public function test_farm_update_preserves_previous_owner_and_location_history(): void
+    {
+        $admin = $this->user('system_admin');
+        $first = Farmer::create(['farmer_code' => 'FRM-PH1-A', 'full_name' => 'Owner A', 'region' => 'Region A', 'district' => 'District A']);
+        $second = Farmer::create(['farmer_code' => 'FRM-PH1-B', 'full_name' => 'Owner B', 'region' => 'Region A', 'district' => 'District A']);
+        $type = FarmType::create(['code' => 'PH1-COMM', 'name' => 'Commercial', 'is_active' => true]);
+        $farm = Farm::create([
+            'farm_code' => 'FARM-PH1-HISTORY', 'farmer_id' => $first->id, 'farm_type_id' => $type->id,
+            'name' => 'History Farm', 'region' => 'Region A', 'district' => 'District A', 'bird_count' => 10,
+        ]);
+        $farm->farmers()->attach($first->id, ['ownership_type' => 'owner', 'is_primary' => true, 'effective_from' => now()->toDateString()]);
+        \App\Models\FarmLocation::create(['farm_id' => $farm->id, 'location_type' => 'primary', 'region' => 'Region A', 'district' => 'District A', 'is_primary' => true]);
+
+        $this->actingAs($admin)->put(route('farms.update', $farm), [
+            'farmer_id' => $second->id, 'farm_type_id' => $type->id, 'name' => 'History Farm',
+            'region' => 'Region B', 'district' => 'District B', 'bird_count' => 12,
+        ])->assertRedirect(route('farms.index'));
+
+        $this->assertSame($second->id, $farm->fresh()->farmer_id);
+        $this->assertNotNull($farm->fresh()->farmers()->where('farmers.id', $first->id)->first()->pivot->effective_to);
+        $this->assertSame(2, $farm->fresh()->locations()->count());
+        $this->assertSame('Region B', $farm->fresh()->locations()->where('is_primary', true)->first()->region);
+    }
+
+    public function test_animal_update_records_farm_movement_and_retires_replaced_identifier(): void
+    {
+        $admin = $this->user('system_admin');
+        $farmer = Farmer::create(['farmer_code' => 'FRM-PH1-ANI', 'full_name' => 'Animal Owner', 'region' => 'Region A', 'district' => 'District A']);
+        $type = FarmType::create(['code' => 'PH1-ANIMAL', 'name' => 'Animal Farm', 'is_active' => true]);
+        $farmA = Farm::create(['farm_code' => 'FARM-PH1-ANI-A', 'farmer_id' => $farmer->id, 'farm_type_id' => $type->id, 'name' => 'Farm A', 'region' => 'Region A', 'district' => 'District A', 'bird_count' => 0]);
+        $farmB = Farm::create(['farm_code' => 'FARM-PH1-ANI-B', 'farmer_id' => $farmer->id, 'farm_type_id' => $type->id, 'name' => 'Farm B', 'region' => 'Region A', 'district' => 'District A', 'bird_count' => 0]);
+        $animal = \App\Models\Animal::create([
+            'animal_code' => 'ANI-PH1-EDIT', 'farm_id' => $farmA->id, 'farmer_id' => $farmer->id,
+            'species' => 'Cattle', 'external_identifier' => 'TAG-OLD',
+        ]);
+        \App\Models\AnimalIdentification::create([
+            'animal_id' => $animal->id, 'identification_type' => 'ear_tag',
+            'identifier_value' => 'TAG-OLD', 'status' => 'active', 'issued_at' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($admin)->put(route('animals.update', $animal), [
+            'farm_id' => $farmB->id, 'species' => 'Cattle', 'external_identifier' => 'TAG-NEW',
+            'identification_method' => 'ear_tag',
+        ])->assertRedirect(route('animals.index'));
+
+        $this->assertSame($farmB->id, $animal->fresh()->farm_id);
+        $this->assertDatabaseHas('animal_movements', ['animal_id' => $animal->id, 'from_farm_id' => $farmA->id, 'to_farm_id' => $farmB->id]);
+        $this->assertDatabaseHas('animal_identifications', ['animal_id' => $animal->id, 'identifier_value' => 'TAG-OLD', 'status' => 'retired']);
+        $this->assertDatabaseHas('animal_identifications', ['animal_id' => $animal->id, 'identifier_value' => 'TAG-NEW', 'status' => 'active']);
+    }
+
+
 }
