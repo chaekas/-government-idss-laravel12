@@ -39,6 +39,11 @@ Primary keys are database-generated. Foreign keys and unique constraints protect
 
 ### 2. Farmer and farm data
 
+- Farmer, farm and animal registries support profile editing and non-destructive archival; archived records retain linked case, animal, ownership, health and movement history.
+- Farmer registration and self-registration write normalized contact and address records; address history is retained when a primary physical address changes.
+- Farm updates retain successive owner periods and farm location history; animal transfers between farms and replacement identifiers are recorded as separate traceability events.
+- Staff accounts can be assigned to an organization, department, office/duty station and mobile number; the server validates that the selected department and office belong to the selected organization.
+- Canonical staff roles are synchronized to the normalized role assignment pivot when staff accounts are created or changed.
 - Farmer profile now has sex, date of birth, nationality, farmer type, status and archive timestamp fields.
 - Farmer contacts and addresses are normalized into child tables.
 - Farm records support farm type, farm size, administrative-area linkage and archive status.
@@ -57,6 +62,7 @@ Primary keys are database-generated. Foreign keys and unique constraints protect
 
 A System Administrator-only Master Data page is available from the sidebar. It supports create, list/search, edit and archive for:
 
+- Organizations, departments and offices, with organization/department hierarchy validation
 - Farm types
 - Species and breeds
 - Disease categories and symptoms
@@ -144,6 +150,11 @@ erDiagram
 
 Automated feature tests added for:
 
+- Organization, department and office administration, including cross-organization assignment rejection.
+- Staff organization/duty-station assignment and normalized role linkage.
+- Farmer contact/address normalization, profile editing and archival.
+- Farm ownership/location history during updates.
+- Animal farm movement and identification replacement history.
 - Presence of the SRS major database entities and key farmer/farm/animal extensions.
 - Repeatable role and farm-type seeding.
 - Multiple farmers linked to a single farm.
@@ -166,4 +177,4 @@ These are data governance inputs, not values to be guessed by the development te
 
 ## Phase 1 exit status
 
-**Database schema and master-data administration foundation implemented in code.** Final production sign-off remains conditional on running migrations against the Ministry PostgreSQL/PostGIS environment, loading approved reference datasets, and reconciling existing records. The phase does not claim that the whole IDSS is production-ready.
+**Phase 1 software foundation and registry workflows implemented in code and automated tests.** Ministry reference-data loading and final production sign-off remain conditional on running migrations against the Ministry PostgreSQL/PostGIS environment, loading approved reference datasets, and reconciling existing records. The phase does not claim that the whole IDSS is production-ready.
