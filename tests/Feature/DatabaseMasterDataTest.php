@@ -267,6 +267,11 @@ class DatabaseMasterDataTest extends TestCase
             'department_id' => $department->id,
             'office_id' => $office->id,
         ]);
+        $staff = User::where('email', 'assigned-field-officer@example.test')->firstOrFail();
+        $this->assertDatabaseHas('role_user', [
+            'user_id' => $staff->id,
+            'role_id' => Role::where('name', 'field_officer')->value('id'),
+        ]);
     }
 
 
