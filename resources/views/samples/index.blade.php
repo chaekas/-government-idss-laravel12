@@ -139,7 +139,7 @@
                                     <label>Laboratory section *</label><input name="laboratory_section" value="{{ $sample->laboratory_section }}" placeholder="e.g. Virology / Bacteriology" required>
                                     <label>Assigned technician *</label>
                                     <select name="assigned_technician" required><option value="">Select active technician</option>
-                                        @foreach(\App\Models\User::where('role','laboratory_technician')->where('is_active',true)->orderBy('name')->get() as $technician)
+                                        @foreach($technicians->filter(fn ($technician) => $technician->laboratories->contains('id', $sample->laboratory_id)) as $technician)
                                             <option value="{{ $technician->id }}" @selected($sample->assigned_technician === $technician->id)>{{ $technician->name }}</option>
                                         @endforeach
                                     </select>
