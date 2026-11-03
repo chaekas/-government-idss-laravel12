@@ -12,6 +12,7 @@ use App\Models\SampleMovement;
 use App\Models\User;
 use App\Models\UserNotification;
 use App\Services\DiseaseCaseWorkflow;
+use App\Services\UserDataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -36,23 +37,7 @@ class SampleController extends Controller
             'testAssignments.test',
         ])->latest();
 
-        // Technicians work only on samples assigned to them. Field officers see
-        // the samples they collected or samples belonging to cases they reported.
-        if ($request->user()->role === 'laboratory_technician') {
-            $query->where(function ($samples) use ($request) {
-                $samples->where('assigned_technician', $request->user()->id)
-                    ->orWhere('transport_status', 'in_transit')
-                    ->orWhere(function ($awaitingQuality) {
-                        $awaitingQuality->where('transport_status', 'received')
-                            ->where('quality_status', 'pending');
-                    });
-            });
-        } elseif ($request->user()->role === 'field_officer') {
-            $query->where(function ($samples) use ($request) {
-                $samples->where('collected_by', $request->user()->id)
-                    ->orWhereHas('diseaseCase', fn ($cases) => $cases->where('reported_by', $request->user()->id));
-            });
-        }
+        $query = app(UserDataScope::class)->samples($query, $request->user());
 
         return view('samples.index', ['samples' => $query->paginate(15), 'laboratoryTests' => LaboratoryTest::where('is_active', true)->orderBy('name')->get()]);
     }
@@ -60,11 +45,10 @@ class SampleController extends Controller
     public function create()
     {
         return view('samples.create', [
-            'cases' => DiseaseCase::with('farm')
+            'cases' => app(UserDataScope::class)->cases(DiseaseCase::with('farm')
                 ->whereIn('status', ['reported','under_investigation','sample_collected'])
                 ->whereHas('investigation', fn ($investigations) => $investigations->whereIn('status', ['under_investigation','sample_collected']))
-                ->latest()
-                ->get(),
+                ->latest(), request()->user())->get(),
             'laboratories' => Laboratory::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
@@ -80,6 +64,7 @@ class SampleController extends Controller
         ]);
 
         $case = DiseaseCase::with('investigation')->findOrFail($data['disease_case_id']);
+        abort_unless(app(UserDataScope::class)->cases(DiseaseCase::query()->whereKey($case->id), $request->user())->exists(), 404);
         if (!$case->investigation || $case->investigation->status === 'closed' || $case->status === 'closed') {
             throw ValidationException::withMessages([
                 'disease_case_id' => 'An active disease investigation is required before a sample can be registered.',
@@ -113,6 +98,7 @@ class SampleController extends Controller
 
     public function update(Request $request, Sample $sample)
     {
+        $this->authorizeSample($request, $sample);
         $data = $request->validate([
             'event_type' => ['required', Rule::in(['packaged', 'dispatched', 'received', 'accepted', 'rejected', 'damaged', 'contaminated', 'insufficient_volume', 'recollection_required', 'testing_started'])],
             'to_location' => ['nullable', 'string', 'max:180'],
@@ -230,6 +216,7 @@ class SampleController extends Controller
 
     public function assign(Request $request, Sample $sample)
     {
+        $this->authorizeSample($request, $sample);
         abort_unless(in_array($request->user()->role, ['laboratory_manager', 'zonal_laboratory_administrator', ...self::ADMIN_ROLES], true), 403);
 
         $data = $request->validate([
@@ -294,6 +281,11 @@ class SampleController extends Controller
         $this->notifyStakeholders($sample, 'Sample assigned for testing', $sample->sample_code.' was assigned to you in '.$sample->laboratory_section.'.', [$sample->assigned_technician]);
 
         return redirect()->route('samples.index')->with('status', 'Sample assigned to '.$sample->assignedTechnician?->name.' for '.$sample->laboratory_section.'.');
+    }
+
+    private function authorizeSample(Request $request, Sample $sample): void
+    {
+        abort_unless(app(UserDataScope::class)->samples(Sample::query()->whereKey($sample->id), $request->user())->exists(), 404);
     }
 
     private function recordMovement(Sample $sample, Request $request, string $event, ?string $from, ?string $to, ?string $notes = null, ?string $receivedBy = null, ?string $condition = null): void
