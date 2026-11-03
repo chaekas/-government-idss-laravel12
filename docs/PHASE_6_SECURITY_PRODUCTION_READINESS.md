@@ -34,7 +34,7 @@ This phase is an engineering readiness baseline. It does not certify the applica
 - SQLite uses VACUUM INTO to create a consistent snapshot and then runs PRAGMA integrity_check.
 - PostgreSQL uses pg_dump custom format and verifies that pg_restore --list can read the result.
 - The command supports a configurable private directory, retention period and binary paths. Old backups created by this command are pruned only after a new backup verifies successfully.
-- A daily 02:00 backup is registered with Laravel Scheduler. Set IDSS_BACKUP_TIME to the approved local operational time and run the scheduler continuously.
+- A daily backup is registered with Laravel Scheduler. Set IDSS_BACKUP_TIME to the approved operational clock time and IDSS_BACKUP_TIMEZONE to the approved IANA timezone (for example, the Ministry hosting timezone); run the scheduler continuously.
 - Backups must be copied to an encrypted, access-controlled off-host backup vault. A backup left only on the application host does not protect against host loss or ransomware.
 
 ### 5. Monitoring and operations
@@ -87,6 +87,8 @@ SESSION_SECURE_COOKIE=true
 TRUSTED_PROXIES=<approved-proxy-addresses>
 LOG_CHANNEL=daily
 IDSS_HSTS_ENABLED=true
+IDSS_BACKUP_TIME=02:00
+IDSS_BACKUP_TIMEZONE=<approved-IANA-timezone>
 ~~~
 
 Install the PHP pdo_pgsql extension and PostgreSQL client utilities (pg_dump, pg_restore) in the application runtime. Validate TLS certificates and network rules. Run migrations during a controlled deployment window:
