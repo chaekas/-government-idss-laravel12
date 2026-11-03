@@ -52,6 +52,12 @@
                         @else
                             <small>Awaiting laboratory assignment</small>
                         @endif
+                        @if($sample->testAssignments->isNotEmpty())
+                            <b>Assigned tests</b><br>
+                            @foreach($sample->testAssignments as $assignment)
+                                <small>{{ $assignment->test?->name ?: 'Diagnostic test' }} · {{ str_replace('_',' ',ucfirst($assignment->status)) }}</small><br>
+                            @endforeach
+                        @endif
                         <hr>
                         @forelse($sample->results as $result)
                             <small><b>{{ $result->result_code }}</b> · {{ $result->test_name }} · {{ str_replace('_',' ',ucfirst($result->status)) }}</small><br>
@@ -137,7 +143,15 @@
                                             <option value="{{ $technician->id }}" @selected($sample->assigned_technician === $technician->id)>{{ $technician->name }}</option>
                                         @endforeach
                                     </select>
-                                    <div class="actions"><button class="button primary">Assign sample</button></div>
+                                    <label>Diagnostic tests to assign</label>
+                                    <div class="form-grid">
+                                        @forelse($laboratoryTests as $test)
+                                            <label class="field"><span><input type="checkbox" name="laboratory_test_ids[]" value="{{ $test->id }}"> {{ $test->name }} ({{ $test->code }})</span></label>
+                                        @empty
+                                            <small>Configure approved diagnostic tests under Master Data before assigning tests.</small>
+                                        @endforelse
+                                    </div>
+                                    <div class="actions"><button class="button primary">Assign sample & tests</button></div>
                                 </form>
                             </details>
                         @endif
