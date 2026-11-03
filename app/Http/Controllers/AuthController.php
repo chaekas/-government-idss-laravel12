@@ -44,7 +44,26 @@ class AuthController extends Controller
                 'district' => $data['district'],
             ]);
 
-            return User::create([
+            if (!empty($data['phone'])) {
+                $farmer->contacts()->create([
+                    'contact_type' => 'phone',
+                    'contact_value' => $data['phone'],
+                    'is_primary' => true,
+                ]);
+            }
+            $farmer->contacts()->create([
+                'contact_type' => 'email',
+                'contact_value' => $data['email'],
+                'is_primary' => true,
+            ]);
+            $farmer->addresses()->create([
+                'address_type' => 'physical',
+                'region' => $data['region'],
+                'district' => $data['district'],
+                'is_primary' => true,
+            ]);
+
+            $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => $data['password'],
@@ -53,9 +72,12 @@ class AuthController extends Controller
                 'is_active' => true,
                 'farmer_id' => $farmer->id,
             ]);
-            if ($role = Role::where('name', 'farmer')->first()) { $user->roles()->sync([$role->id]); }
+            if ($role = Role::where('name', 'farmer')->first()) {
+                $user->roles()->sync([$role->id]);
+            }
+
             return $user;
-        });
+        });;
 
         Auth::login($user);
         $request->session()->regenerate();
