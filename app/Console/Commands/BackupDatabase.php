@@ -24,7 +24,9 @@ class BackupDatabase extends Command
                 throw new \RuntimeException('Unable to create the private backup directory.');
             }
 
-            @chmod($directory, 0700);
+            if (!chmod($directory, 0700)) {
+                throw new \\RuntimeException('Unable to restrict backup directory permissions.');
+            }
 
             if (!is_writable($directory)) {
                 throw new \RuntimeException('The private backup directory is not writable.');
@@ -50,7 +52,9 @@ class BackupDatabase extends Command
                 throw new \RuntimeException('The database backup was not created or is empty.');
             }
 
-            @chmod($path, 0600);
+            if (!chmod($path, 0600)) {
+                throw new \\RuntimeException('Unable to restrict backup file permissions.');
+            }
             $this->verifyBackup($path, $driver);
             $this->pruneOldBackups($directory);
 
