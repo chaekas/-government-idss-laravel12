@@ -10,6 +10,7 @@ use App\Models\Investigation;
 use App\Models\LaboratoryTestResult;
 use App\Models\Outbreak;
 use App\Models\Sample;
+use App\Services\UserDataScope;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -17,34 +18,34 @@ class DashboardController extends Controller
     public function __invoke(Request $request)
     {
         $user = $request->user();
+        $scope = app(UserDataScope::class);
 
         if ($user->role === 'farmer') {
-            $farmerId = $user->farmer_id;
-            $farmIds = $farmerId
-                ? Farm::where(function ($farms) use ($farmerId) {
-                    $farms->where('farmer_id', $farmerId)
-                        ->orWhereHas('farmers', fn ($owners) => $owners->where('farmers.id', $farmerId)->whereNull('farmer_farm.effective_to'));
-                })->select('id')
-                : Farm::whereRaw('1 = 0')->select('id');
-            $caseIds = DiseaseCase::whereIn('farm_id', $farmIds)->select('id');
+            $farmIds = $scope->farms(Farm::query(), $user)->select('id');
+            $caseIds = $scope->cases(DiseaseCase::query(), $user)->select('id');
+            $investigations = $scope->investigations(Investigation::query(), $user);
+            $samples = $scope->samples(Sample::query(), $user);
 
             return view('dashboard', [
                 'dashboardMode' => 'farmer',
-                'farmerCount' => $farmerId ? 1 : 0,
-                'farmCount' => $farmerId ? Farm::where('farmer_id', $farmerId)->count() : 0,
+                'farmerCount' => $user->farmer_id ? 1 : 0,
+                'farmCount' => (clone $farmIds)->count(),
                 'animalCount' => Animal::whereIn('farm_id', $farmIds)->count(),
-                'caseCount' => DiseaseCase::whereIn('farm_id', $farmIds)->count(),
-                'openCaseCount' => DiseaseCase::whereIn('farm_id', $farmIds)->whereIn('status', ['reported', 'under_investigation', 'sample_collected', 'laboratory_testing'])->count(),
-                'investigationCount' => Investigation::whereIn('status', ['pending', 'under_investigation', 'sample_collected'])->whereIn('disease_case_id', $caseIds)->count(),
-                'sampleCount' => Sample::whereIn('disease_case_id', $caseIds)->count(),
-                'pendingSampleCount' => Sample::whereIn('disease_case_id', $caseIds)->whereIn('test_status', ['pending', 'in_progress', 'completed'])->count(),
+                'caseCount' => (clone $caseIds)->count(),
+                'openCaseCount' => (clone $caseIds)->whereIn('status', ['reported', 'under_investigation', 'sample_collected', 'laboratory_testing'])->count(),
+                'investigationCount' => (clone $investigations)->whereIn('status', ['pending', 'under_investigation', 'sample_collected'])->count(),
+                'sampleCount' => (clone $samples)->count(),
+                'pendingSampleCount' => (clone $samples)->whereIn('test_status', ['pending', 'in_progress', 'completed'])->count(),
                 'pendingResultCount' => 0,
                 'outbreakCount' => 0,
-                'recentCases' => DiseaseCase::with('farm')->whereIn('farm_id', $farmIds)->latest()->take(8)->get(),
+                'recentCases' => $scope->cases(DiseaseCase::with('farm')->latest(), $user)->take(8)->get(),
             ]);
         }
 
-        if (in_array($user->role, ['laboratory_technician', 'laboratory_manager', 'zonal_laboratory_administrator'], true)) {
+        if ($user->hasRole(['laboratory_technician', 'laboratory_manager', 'zonal_laboratory_administrator'])) {
+            $samples = $scope->samples(Sample::query(), $user);
+            $results = $scope->laboratoryResults(LaboratoryTestResult::query(), $user);
+
             return view('dashboard', [
                 'dashboardMode' => 'laboratory',
                 'farmerCount' => 0,
@@ -53,27 +54,35 @@ class DashboardController extends Controller
                 'caseCount' => 0,
                 'openCaseCount' => 0,
                 'investigationCount' => 0,
-                'sampleCount' => Sample::count(),
-                'pendingSampleCount' => Sample::whereIn('test_status', ['pending', 'in_progress', 'completed'])->count(),
-                'pendingResultCount' => LaboratoryTestResult::where('status', 'submitted_for_review')->count(),
+                'sampleCount' => (clone $samples)->count(),
+                'pendingSampleCount' => (clone $samples)->whereIn('test_status', ['pending', 'in_progress', 'completed'])->count(),
+                'pendingResultCount' => (clone $results)->where('status', 'submitted_for_review')->count(),
                 'outbreakCount' => 0,
                 'recentCases' => collect(),
             ]);
         }
 
+        $farms = $scope->farms(Farm::query(), $user);
+        $cases = $scope->cases(DiseaseCase::query(), $user);
+        $investigations = $scope->investigations(Investigation::query(), $user);
+        $samples = $scope->samples(Sample::query(), $user);
+        $results = $scope->laboratoryResults(LaboratoryTestResult::query(), $user);
+        $outbreaks = $scope->outbreaks(Outbreak::query(), $user);
+        $farmers = Farmer::whereHas('farms', fn ($query) => $scope->farms($query, $user));
+
         return view('dashboard', [
             'dashboardMode' => 'surveillance',
-            'farmerCount' => Farmer::count(),
-            'farmCount' => Farm::count(),
-            'animalCount' => Animal::count(),
-            'caseCount' => DiseaseCase::count(),
-            'openCaseCount' => DiseaseCase::whereIn('status', ['reported', 'under_investigation', 'sample_collected', 'laboratory_testing'])->count(),
-            'investigationCount' => Investigation::whereIn('status', ['pending', 'under_investigation', 'sample_collected'])->count(),
-            'sampleCount' => Sample::count(),
-            'pendingSampleCount' => Sample::whereIn('test_status', ['pending', 'in_progress', 'completed'])->count(),
-            'pendingResultCount' => LaboratoryTestResult::where('status', 'submitted_for_review')->count(),
-            'outbreakCount' => Outbreak::whereIn('status', ['suspected', 'active'])->count(),
-            'recentCases' => DiseaseCase::with('farm')->latest()->take(8)->get(),
+            'farmerCount' => (clone $farmers)->count(),
+            'farmCount' => (clone $farms)->count(),
+            'animalCount' => Animal::whereIn('farm_id', (clone $farms)->select('id'))->count(),
+            'caseCount' => (clone $cases)->count(),
+            'openCaseCount' => (clone $cases)->whereIn('status', ['reported', 'under_investigation', 'sample_collected', 'laboratory_testing'])->count(),
+            'investigationCount' => (clone $investigations)->whereIn('status', ['pending', 'under_investigation', 'sample_collected'])->count(),
+            'sampleCount' => (clone $samples)->count(),
+            'pendingSampleCount' => (clone $samples)->whereIn('test_status', ['pending', 'in_progress', 'completed'])->count(),
+            'pendingResultCount' => (clone $results)->where('status', 'submitted_for_review')->count(),
+            'outbreakCount' => (clone $outbreaks)->whereIn('status', ['suspected', 'active'])->count(),
+            'recentCases' => $scope->cases(DiseaseCase::with('farm')->latest(), $user)->take(8)->get(),
         ]);
     }
 }
