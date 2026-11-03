@@ -10,6 +10,7 @@ use App\Http\Controllers\GISController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\FarmerController;
 use App\Http\Controllers\InvestigationController;
+use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\LaboratoryController;
 use App\Http\Controllers\LaboratoryOperationsController;
 use App\Http\Controllers\MasterDataController;
@@ -133,6 +134,12 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('role:laboratory_manager,system_admin,super_admin,super-admin,administrator,admin')->group(function () {
         Route::put('/laboratory/{result}/review', [LaboratoryResultController::class, 'approve'])->name('laboratory.approve');
+    });
+
+    // External government integration status is administrator-only.
+    Route::middleware('role:system_admin,super_admin,super-admin,administrator,admin')->group(function () {
+        Route::get('/system/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
+        Route::post('/system/integrations/process', [IntegrationController::class, 'process'])->name('integrations.process');
     });
 
     // Reports and GIS are leadership functions, not public or laboratory-technician functions.
