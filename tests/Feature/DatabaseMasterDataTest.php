@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
+use App\Models\AdministrativeArea;
 use App\Models\FarmType;
 use App\Models\Farmer;
 use App\Models\Farm;
