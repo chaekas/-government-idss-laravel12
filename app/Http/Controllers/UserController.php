@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
@@ -31,15 +32,15 @@ class UserController extends Controller
     private function validateAssignmentHierarchy(array $data): void
     {
         if (!empty($data['department_id']) && !empty($data['organization_id'])) {
-            abort_unless(Department::whereKey($data['department_id'])->where('organization_id', $data['organization_id'])->exists(), 422, 'The selected department does not belong to the selected organization.');
+            if (!Department::whereKey($data['department_id'])->where('organization_id', $data['organization_id'])->exists()) { throw ValidationException::withMessages(['department_id' => 'The selected department does not belong to the selected organization.']); }
         }
         if (!empty($data['office_id'])) {
             $office = Office::findOrFail($data['office_id']);
             if (!empty($data['organization_id'])) {
-                abort_unless((int) $office->organization_id === (int) $data['organization_id'], 422, 'The selected office does not belong to the selected organization.');
+                if ((int) $office->organization_id !== (int) $data['organization_id']) { throw ValidationException::withMessages(['office_id' => 'The selected office does not belong to the selected organization.']); }
             }
             if (!empty($data['department_id'])) {
-                abort_unless((int) $office->department_id === (int) $data['department_id'], 422, 'The selected office does not belong to the selected department.');
+                if ((int) $office->department_id !== (int) $data['department_id']) { throw ValidationException::withMessages(['office_id' => 'The selected office does not belong to the selected department.']); }
             }
         }
     }
