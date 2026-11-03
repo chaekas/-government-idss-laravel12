@@ -56,7 +56,7 @@ Route::middleware('auth')->group(function () {
 
     // Field registration and case investigation.
     Route::middleware('role:field_officer,regional_veterinary_officer,system_admin,administrator,admin')->group(function () {
-        Route::resource('farmers', FarmerController::class)->only(['index', 'create', 'store']);
+        Route::resource('farmers', FarmerController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
         Route::resource('farms', FarmController::class)->only(['index', 'create', 'store']);
         Route::resource('animals', AnimalController::class)->only(['index', 'create', 'store']);
 
