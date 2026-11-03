@@ -22,6 +22,9 @@ use App\Http\Controllers\SurveillanceController;
 use App\Http\Controllers\SurveillanceAttachmentController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
 
