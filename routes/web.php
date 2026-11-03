@@ -58,7 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:field_officer,regional_veterinary_officer,system_admin,administrator,admin')->group(function () {
         Route::resource('farmers', FarmerController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
         Route::resource('farms', FarmController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
-        Route::resource('animals', AnimalController::class)->only(['index', 'create', 'store']);
+        Route::resource('animals', AnimalController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
         Route::get('/investigations/create', [InvestigationController::class, 'create'])->name('investigations.create');
         Route::post('/investigations', [InvestigationController::class, 'store'])->name('investigations.store');
