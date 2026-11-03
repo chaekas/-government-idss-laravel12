@@ -40,7 +40,7 @@ class SampleController extends Controller
 
         $query = app(UserDataScope::class)->samples($query, $request->user());
 
-        return view('samples.index', ['samples' => $query->paginate(15), 'laboratoryTests' => LaboratoryTest::where('is_active', true)->orderBy('name')->get(), 'technicians' => User::with(['laboratories' => fn ($labs) => $labs->where('laboratories.is_active', true)])->where('role', 'laboratory_technician')->where('is_active', true)->orderBy('name')->get()]);
+        return view('samples.index', ['samples' => $query->paginate(15), 'laboratoryTests' => LaboratoryTest::where('is_active', true)->orderBy('name')->get(), 'technicians' => User::with(['laboratories' => fn ($labs) => $labs->where('laboratories.is_active', true)->wherePivot('assignment_role', 'technician')])->where('role', 'laboratory_technician')->where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function create()
