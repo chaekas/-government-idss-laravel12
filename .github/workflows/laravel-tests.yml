@@ -38,7 +38,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: \${{ matrix.php-version }}
+          php-version: ${{ matrix.php-version }}
           extensions: ctype, curl, dom, fileinfo, mbstring, pdo_pgsql, pdo_sqlite, sqlite3, tokenizer, xml
           coverage: none
 
