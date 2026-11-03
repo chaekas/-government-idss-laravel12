@@ -122,6 +122,7 @@ class FarmController extends Controller
             'farm' => $farm,
             'farmers' => Farmer::where('status', 'active')->orderBy('full_name')->get(),
             'farmTypes' => FarmType::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
+            'administrativeAreas' => AdministrativeArea::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 
