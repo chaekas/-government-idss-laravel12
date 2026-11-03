@@ -18,6 +18,7 @@ use App\Models\TestMethod;
 use App\Models\SurveillanceAlertRule;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class MasterDataController extends Controller
 {
@@ -152,7 +153,7 @@ class MasterDataController extends Controller
 
         $data = $request->validate($rules);
         if ($type === 'offices' && !empty($data['department_id']) && !empty($data['organization_id'])) {
-            abort_unless(Department::whereKey($data['department_id'])->where('organization_id', $data['organization_id'])->exists(), 422, 'The selected department does not belong to the selected organization.');
+            if (!Department::whereKey($data['department_id'])->where('organization_id', $data['organization_id'])->exists()) { throw ValidationException::withMessages(['department_id' => 'The selected department does not belong to the selected organization.']); }
         }
         if ($type === 'breeds') {
             $exists = Breed::where('species_id', $data['species_id'])->where('code', $data['code'])->when($ignoreId, fn ($q) => $q->where('id', '<>', $ignoreId))->exists();
