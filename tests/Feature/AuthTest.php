@@ -27,6 +27,7 @@ class AuthTest extends TestCase
 
     public function test_public_registration_creates_a_linked_farmer_account_and_signs_user_in(): void
     {
+        $this->seed();
         $response = $this->post(route('register.store'), [
             'name' => 'New Farmer',
             'email' => 'new.farmer@example.test',
@@ -53,6 +54,15 @@ class AuthTest extends TestCase
             'email' => 'new.farmer@example.test',
             'region' => 'Morogoro',
             'district' => 'Kilosa',
+        ]);
+        $this->assertDatabaseHas('farmer_contacts', [
+            'farmer_id' => $user->farmer_id, 'contact_type' => 'phone', 'contact_value' => '+255700000001',
+        ]);
+        $this->assertDatabaseHas('farmer_addresses', [
+            'farmer_id' => $user->farmer_id, 'region' => 'Morogoro', 'district' => 'Kilosa',
+        ]);
+        $this->assertDatabaseHas('role_user', [
+            'user_id' => $user->id, 'role_id' => \App\Models\Role::where('name', 'farmer')->value('id'),
         ]);
     }
 
