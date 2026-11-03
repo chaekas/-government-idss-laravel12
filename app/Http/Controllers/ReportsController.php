@@ -15,6 +15,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Services\UserDataScope;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
@@ -37,16 +38,19 @@ class ReportsController extends Controller
     public function index(Request $request)
     {
         $filters = $this->filters($request);
-        $cases = $this->applyDates(DiseaseCase::query(), $filters);
-        $samples = $this->applyDates(Sample::query(), $filters);
-        $results = $this->applyDates(LaboratoryTestResult::query(), $filters);
-        $outbreaks = $this->applyDates(Outbreak::query(), $filters);
+        $scope = app(UserDataScope::class);
+        $cases = $this->applyDates($scope->cases(DiseaseCase::query(), $request->user()), $filters);
+        $samples = $this->applyDates($scope->samples(Sample::query(), $request->user()), $filters);
+        $results = $this->applyDates($scope->laboratoryResults(LaboratoryTestResult::query(), $request->user()), $filters);
+        $outbreaks = $this->applyDates($scope->outbreaks(Outbreak::query(), $request->user()), $filters);
+        $farms = $scope->farms(Farm::query(), $request->user());
+        $farmers = Farmer::whereHas('farms', fn ($query) => $scope->farms($query, $request->user()));
 
         return view('reports.index', [
             'from' => $filters['from'] ?? '',
             'to' => $filters['to'] ?? '',
-            'farmerCount' => Farmer::count(),
-            'farmCount' => Farm::count(),
+            'farmerCount' => (clone $farmers)->count(),
+            'farmCount' => (clone $farms)->count(),
             'caseCount' => (clone $cases)->count(),
             'openCaseCount' => (clone $cases)->whereIn('status', ['reported', 'under_investigation', 'sample_collected', 'laboratory_testing'])->count(),
             'sampleCount' => (clone $samples)->count(),
@@ -61,7 +65,7 @@ class ReportsController extends Controller
     public function cases(Request $request): StreamedResponse
     {
         $filters = $this->filters($request);
-        $query = $this->applyDates(DiseaseCase::with(['farm', 'reporter'])->orderBy('created_at'), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->cases(DiseaseCase::with(['farm', 'reporter'])->orderBy('created_at'), $request->user()), $filters);
 
         return response()->streamDownload(function () use ($query): void {
             $out = fopen('php://output', 'w');
@@ -77,7 +81,7 @@ class ReportsController extends Controller
     public function samples(Request $request): StreamedResponse
     {
         $filters = $this->filters($request);
-        $query = $this->applyDates(Sample::with(['diseaseCase', 'laboratory'])->orderBy('created_at'), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->samples(Sample::with(['diseaseCase', 'laboratory'])->orderBy('created_at'), $request->user()), $filters);
 
         return response()->streamDownload(function () use ($query): void {
             $out = fopen('php://output', 'w');
@@ -93,7 +97,7 @@ class ReportsController extends Controller
     public function results(Request $request): StreamedResponse
     {
         $filters = $this->filters($request);
-        $query = $this->applyDates(LaboratoryTestResult::with(['sample', 'laboratory', 'testMethod'])->orderBy('created_at'), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->laboratoryResults(LaboratoryTestResult::with(['sample', 'laboratory', 'testMethod'])->orderBy('created_at'), $request->user()), $filters);
 
         return response()->streamDownload(function () use ($query): void {
             $out = fopen('php://output', 'w');
@@ -110,7 +114,7 @@ class ReportsController extends Controller
     public function outbreaks(Request $request): StreamedResponse
     {
         $filters = $this->filters($request);
-        $query = $this->applyDates(Outbreak::orderBy('created_at'), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->outbreaks(Outbreak::orderBy('created_at'), $request->user()), $filters);
 
         return response()->streamDownload(function () use ($query): void {
             $out = fopen('php://output', 'w');
@@ -126,10 +130,10 @@ class ReportsController extends Controller
     public function print(Request $request)
     {
         $filters = $this->filters($request);
-        $cases = $this->applyDates(DiseaseCase::with(['farm','reporter'])->latest(), $filters)->limit(500)->get();
-        $samples = $this->applyDates(Sample::with(['diseaseCase','laboratory'])->latest(), $filters)->limit(500)->get();
-        $results = $this->applyDates(LaboratoryTestResult::with(['sample','laboratory'])->latest(), $filters)->limit(500)->get();
-        $outbreaks = $this->applyDates(Outbreak::latest(), $filters)->limit(500)->get();
+        $cases = $this->applyDates(app(UserDataScope::class)->cases(DiseaseCase::with(['farm','reporter'])->latest(), $request->user()), $filters)->limit(500)->get();
+        $samples = $this->applyDates(app(UserDataScope::class)->samples(Sample::with(['diseaseCase','laboratory'])->latest(), $request->user()), $filters)->limit(500)->get();
+        $results = $this->applyDates(app(UserDataScope::class)->laboratoryResults(LaboratoryTestResult::with(['sample','laboratory'])->latest(), $request->user()), $filters)->limit(500)->get();
+        $outbreaks = $this->applyDates(app(UserDataScope::class)->outbreaks(Outbreak::latest(), $request->user()), $filters)->limit(500)->get();
 
         return view('reports.print', [
             'from' => $filters['from'] ?? null, 'to' => $filters['to'] ?? null,
