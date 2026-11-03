@@ -25,7 +25,7 @@ class BackupDatabase extends Command
             }
 
             if (!chmod($directory, 0700)) {
-                throw new \\RuntimeException('Unable to restrict backup directory permissions.');
+                throw new \RuntimeException('Unable to restrict backup directory permissions.');
             }
 
             if (!is_writable($directory)) {
@@ -53,7 +53,7 @@ class BackupDatabase extends Command
             }
 
             if (!chmod($path, 0600)) {
-                throw new \\RuntimeException('Unable to restrict backup file permissions.');
+                throw new \RuntimeException('Unable to restrict backup file permissions.');
             }
             $this->verifyBackup($path, $driver);
             $this->pruneOldBackups($directory);
