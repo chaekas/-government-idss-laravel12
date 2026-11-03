@@ -6,7 +6,7 @@
 @csrf @if(isset($item)) @method('PUT') @endif
 @foreach($definition['fields'] as $field)
     @php($value = old($field, $item->$field ?? (in_array($field,['is_active']) ? 1 : '')))
-    <label class="field"><span>{{ ucwords(str_replace('_',' ',$field)) }} @if(in_array($field,['code','name','area_type','species_id','organization_id'])) <b>*</b> @endif</span>
+    <label class="field"><span>{{ ucwords(str_replace('_',' ',$field)) }} @if(in_array($field,['code','name','area_type','species_id'])) <b>*</b> @endif</span>
     @if($field === 'description' || $field === 'specimen_requirements')
         <textarea name="{{ $field }}" rows="3">{{ $value }}</textarea>
     @elseif($field === 'is_active')
