@@ -34,23 +34,31 @@ class OutbreakController extends Controller
         return view('outbreaks.create',[
             'cases'=>$cases->get(),
             'categories'=>DiseaseCategory::where('is_active',true)->orderBy('name')->get(),
-            'areas'=>AdministrativeArea::where('is_active',true)->orderBy('name')->get(),
+            'areas'=>AdministrativeArea::where('is_active',true)
+                ->when(!$request->user()->hasRole(['system_admin','super_admin','super-admin','administrator','admin','mlf_officer']), fn ($areas) => $areas->whereIn('id', $request->user()->accessibleAdministrativeAreaIds() ?: [-1]))
+                ->orderBy('name')->get(),
         ]);
     }
 
     public function store(Request $request)
     {
         $data=$this->validated($request);
-        $this->authorizeArea($request, $data['administrative_area_id'] ?? null);
         $caseIds=$data['case_ids']??[]; unset($data['case_ids']);
-        $data['outbreak_code']='OUT-'.now()->format('ymd').'-'.Str::upper(Str::random(6));
-        $data['reported_by']=$request->user()->id; $data['status']='suspected';
+        $cases = collect();
         if($caseIds){
             $cases=app(UserDataScope::class)->cases(DiseaseCase::with('farm')->whereIn('id',$caseIds), $request->user())->get();
             if($cases->count()!==count($caseIds)) throw ValidationException::withMessages(['case_ids'=>'One or more selected cases are invalid or outside your assigned geographic scope.']);
             foreach($cases as $case) if($case->farm?->district!==$data['district'] || $case->farm?->region!==$data['region']) throw ValidationException::withMessages(['case_ids'=>'Only disease cases from the outbreak district and region can be linked.']);
+            $caseAreaIds = $cases->map(fn ($case) => $case->administrative_area_id ?: $case->farm?->administrative_area_id)->filter()->unique()->values();
+            if (!$data['administrative_area_id'] && $caseAreaIds->count() === 1) $data['administrative_area_id'] = $caseAreaIds->first();
+            if ($caseAreaIds->count() > 1 || ($caseAreaIds->isNotEmpty() && (int) $data['administrative_area_id'] !== (int) $caseAreaIds->first())) {
+                throw ValidationException::withMessages(['administrative_area_id' => 'The outbreak area must match the linked disease cases.']);
+            }
             $data['cases_count']=$cases->count(); $data['deaths_count']=$cases->sum('birds_dead');
         }
+        $this->authorizeArea($request, $data['administrative_area_id'] ?? null);
+        $data['outbreak_code']='OUT-'.now()->format('ymd').'-'.Str::upper(Str::random(6));
+        $data['reported_by']=$request->user()->id; $data['status']='suspected';
         DB::transaction(function()use($data,$caseIds,$request,&$outbreak){
             $outbreak=Outbreak::create($data);
             $outbreak->diseaseCases()->sync($caseIds);
@@ -67,15 +75,20 @@ class OutbreakController extends Controller
         abort_unless(in_array($request->user()->role,['field_officer','regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'],true),403);
         abort_if($outbreak->status==='closed',422,'Closed outbreak records are locked.');
         $data=$this->validated($request,true);
-        $this->authorizeArea($request, $data['administrative_area_id'] ?? null);
         if($request->user()->role==='field_officer' && $data['status']!==$outbreak->status) abort(403,'Only regional or Ministry surveillance leadership may change outbreak status.');
         $caseIds=$data['case_ids']??[]; unset($data['case_ids']);
         if($caseIds){
             $cases=app(UserDataScope::class)->cases(DiseaseCase::with('farm')->whereIn('id',$caseIds), $request->user())->get();
             if($cases->count()!==count($caseIds)) throw ValidationException::withMessages(['case_ids'=>'One or more selected cases are invalid or outside your assigned geographic scope.']);
             foreach($cases as $case) if($case->farm?->district!==$data['district'] || $case->farm?->region!==$data['region']) throw ValidationException::withMessages(['case_ids'=>'Only disease cases from the outbreak district and region can be linked.']);
-            $data['cases_count']=$cases->count(); $data['deaths_count']=$cases->sum('birds_dead');
+            $caseAreaIds = $cases->map(fn ($case) => $case->administrative_area_id ?: $case->farm?->administrative_area_id)->filter()->unique()->values();
+            if (!$data['administrative_area_id'] && $caseAreaIds->count() === 1) $data['administrative_area_id'] = $caseAreaIds->first();
+            if ($caseAreaIds->count() > 1 || ($caseAreaIds->isNotEmpty() && (int) ($data['administrative_area_id'] ?? 0) !== (int) $caseAreaIds->first())) {
+                throw ValidationException::withMessages(['administrative_area_id' => 'The outbreak area must match the linked disease cases.']);
+            }
         }
+        $data['administrative_area_id'] = $data['administrative_area_id'] ?? $outbreak->administrative_area_id;
+        $this->authorizeArea($request, $data['administrative_area_id'] ?? null);
         $previousStatus=$outbreak->status;
         $data['modified_by']=$request->user()->id;
         if($data['status']==='active' && !$outbreak->confirmed_at) $data['confirmed_at']=now();
