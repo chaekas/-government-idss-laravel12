@@ -21,7 +21,7 @@ This matrix tracks the Laravel repository against the current 79-page IDSS SRS. 
 | Audit trail (FR-191–FR-198) | Partial | Existing audit records plus farmer/farm/animal/master-data events. Full login, modification, deletion, report, synchronization and searchable audit coverage remain. |
 | System administration/master data (FR-199–FR-208) | Partial foundation | Admin master-data screens support farm types, species, breeds, disease categories/symptoms, sample types, tests/methods and administrative areas. Laboratory, organization, notification, backup and system settings administration remain. |
 | Database requirements (SRS Chapter 6) | Schema foundation implemented | Additive migrations, foreign keys, unique constraints, indexes, normalized master data, audit actor/status fields, ownership and traceability relationships are added. PostgreSQL 14+/PostGIS deployment validation, approved data loading, migration reconciliation and production security/backup tests remain. |
-| Deployment / operations | Partial | Codespaces SQLite development supported. Production target is PostgreSQL 14+ with PostGIS; HTTPS, backup/restore, monitoring, UAT and formal acceptance remain. |
+| Deployment / operations | Phase 6 engineering baseline implemented; production acceptance pending | SQLite development and PostgreSQL connection configuration; secure headers/session defaults; restricted trusted-proxy defaults; database readiness endpoint; additive operational indexes; verified SQLite/PostgreSQL backup command and daily scheduler hook; restore and deployment runbooks. Production PostGIS provisioning, HTTPS/proxy configuration, off-host backup vault, restore rehearsal, monitoring integration, performance testing, independent security assessment and Ministry acceptance remain. |
 
 ## Phase 1 — Database and master data
 
@@ -53,3 +53,22 @@ Species, breeds, disease categories, symptoms, sample types, test methods, labor
 8. System links the result to the case and makes it available for surveillance, outbreak monitoring and reporting.
 9. Verify access control, audit records, GIS and external synchronization.
 10. Conduct Ministry UAT, database migration reconciliation and production security review before rollout.
+
+
+## Phase 6 — Security and production readiness
+
+See [Phase 6 security and production readiness](PHASE_6_SECURITY_PRODUCTION_READINESS.md).
+
+Implemented in code:
+- Baseline security headers, HTTPS-only configurable HSTS and production-secure/encrypted session defaults.
+- Explicit trusted proxy configuration rather than trusting all forwarded headers.
+- PostgreSQL connection settings and additive composite indexes for operational query patterns.
+- Public database readiness endpoint with minimal output.
+- Private verified SQLite/PostgreSQL backup command, configurable retention and daily scheduler registration.
+- Automated tests for readiness and HTTP security headers; existing RBAC and geographic/laboratory isolation tests remain part of the suite.
+
+Not claimed as completed production acceptance:
+- PostgreSQL/PostGIS infrastructure provisioning and official boundary data.
+- Off-host encrypted backup vault, restore drill and approved recovery objectives.
+- External monitoring/alert routing, realistic load testing and query-plan review.
+- Independent penetration test, Ministry UAT, role/permission approval and formal go-live sign-off.
