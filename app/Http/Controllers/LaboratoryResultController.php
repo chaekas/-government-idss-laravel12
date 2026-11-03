@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\Laboratory;
 use App\Models\LaboratoryTestResult;
+use App\Models\LaboratoryTestAssignment;
+use App\Models\TestMethod;
 use App\Models\Sample;
 use App\Models\SampleMovement;
 use App\Models\User;
@@ -34,14 +36,13 @@ class LaboratoryResultController extends Controller
         abort_unless($request->user()->role === 'laboratory_technician', 403);
 
         return view('laboratory.create', [
-            'samples' => Sample::where('quality_status', 'accepted')
-                ->where('transport_status', 'received')
+            'assignments' => LaboratoryTestAssignment::with(['sample.laboratory', 'test'])
                 ->where('assigned_technician', $request->user()->id)
-                ->whereIn('test_status', ['in_progress', 'completed'])
-                ->with('laboratory')
-                ->orderBy('sample_code')
+                ->whereIn('status', ['assigned', 'in_progress'])
+                ->whereHas('sample', fn ($samples) => $samples->where('quality_status', 'accepted')->where('transport_status', 'received')->whereNotNull('testing_started_at'))
+                ->orderBy('assigned_at')
                 ->get(),
-            'laboratories' => Laboratory::where('is_active', true)->orderBy('name')->get(),
+            'methods' => TestMethod::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 
@@ -50,9 +51,11 @@ class LaboratoryResultController extends Controller
         abort_unless($request->user()->role === 'laboratory_technician', 403);
 
         $data = $request->validate([
-            'sample_id' => ['required', 'exists:samples,id'],
-            'laboratory_id' => ['required', 'exists:laboratories,id'],
-            'test_name' => ['required', 'string', 'max:180'],
+            'laboratory_test_assignment_id' => ['nullable', 'exists:laboratory_test_assignments,id'],
+            'sample_id' => ['required_without:laboratory_test_assignment_id', 'nullable', 'exists:samples,id'],
+            'laboratory_id' => ['required_without:laboratory_test_assignment_id', 'nullable', 'exists:laboratories,id'],
+            'test_name' => ['required_without:laboratory_test_assignment_id', 'nullable', 'string', 'max:180'],
+            'test_method_id' => ['nullable', 'exists:test_methods,id'],
             'method' => ['nullable', 'string', 'max:180'],
             'observations' => ['nullable', 'string', 'max:5000'],
             'qualitative_result' => ['nullable', 'string', 'max:180'],
@@ -60,6 +63,18 @@ class LaboratoryResultController extends Controller
             'numeric_unit' => ['nullable', 'string', 'max:50'],
             'technician_comments' => ['nullable', 'string', 'max:3000'],
         ]);
+
+        $assignment = null;
+        if (!empty($data['laboratory_test_assignment_id'])) {
+            $assignment = LaboratoryTestAssignment::with(['sample', 'test'])->findOrFail($data['laboratory_test_assignment_id']);
+            if ((int) $assignment->assigned_technician !== (int) $request->user()->id || !in_array($assignment->status, ['assigned', 'in_progress'], true)) {
+                throw ValidationException::withMessages(['laboratory_test_assignment_id' => 'This diagnostic test is not assigned to your account or is no longer open.']);
+            }
+            $data['sample_id'] = $assignment->sample_id;
+            $data['laboratory_id'] = $assignment->laboratory_id;
+            $data['test_name'] = $assignment->test?->name;
+            $data['laboratory_test_id'] = $assignment->laboratory_test_id;
+        }
 
         $sample = Sample::with('diseaseCase')->findOrFail($data['sample_id']);
         if ($sample->quality_status !== 'accepted' || $sample->transport_status !== 'received') {
@@ -81,11 +96,19 @@ class LaboratoryResultController extends Controller
             throw ValidationException::withMessages(['qualitative_result' => 'Enter at least one finding: a qualitative result, a numeric result, or observations.']);
         }
 
+        if (!empty($data['test_method_id'])) {
+            $methodRecord = TestMethod::where('is_active', true)->findOrFail($data['test_method_id']);
+            $data['method'] = $methodRecord->name;
+        }
         $data['result_code'] = 'RES-'.now()->format('ymd').'-'.Str::upper(Str::random(6));
         $data['assigned_technician'] = $request->user()->id;
         $data['status'] = 'submitted_for_review';
         $data['tested_at'] = now();
         $result = LaboratoryTestResult::create($data);
+
+        if ($assignment) {
+            $assignment->update(['status' => 'submitted_for_review', 'completed_at' => now()]);
+        }
 
         $sample->update([
             'test_status' => 'completed',
@@ -133,6 +156,12 @@ class LaboratoryResultController extends Controller
             'status' => $approved ? 'approved' : 'rejected',
             'approved_at' => $approved ? now() : null,
         ]);
+        if ($result->assignment) {
+            $result->assignment->update([
+                'status' => $approved ? 'approved' : 'rejected',
+                'completed_at' => now(),
+            ]);
+        }
 
         if ($approved) {
             // A rejected historical attempt does not block a later approved repeat.
