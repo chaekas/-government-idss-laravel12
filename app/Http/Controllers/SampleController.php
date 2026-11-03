@@ -252,14 +252,8 @@ class SampleController extends Controller
             throw ValidationException::withMessages(['assigned_technician' => 'The final approved sample cannot be reassigned.']);
         }
 
-        $sample->update([
-            'laboratory_section' => $data['laboratory_section'],
-            'assigned_technician' => $data['assigned_technician'],
-            'assigned_by' => $request->user()->id,
-            'assigned_at' => now(),
-        ]);
-
-        foreach (array_unique($data['laboratory_test_ids'] ?? []) as $testId) {
+        $testIds = array_values(array_unique($data['laboratory_test_ids'] ?? []));
+        foreach ($testIds as $testId) {
             $alreadyOpen = LaboratoryTestAssignment::where('sample_id', $sample->id)
                 ->where('laboratory_test_id', $testId)
                 ->whereIn('status', ['assigned', 'in_progress', 'submitted_for_review', 'approved'])
@@ -267,6 +261,16 @@ class SampleController extends Controller
             if ($alreadyOpen) {
                 throw ValidationException::withMessages(['laboratory_test_ids' => 'A selected test already has an active or approved assignment for this sample.']);
             }
+        }
+
+        $sample->update([
+            'laboratory_section' => $data['laboratory_section'],
+            'assigned_technician' => $data['assigned_technician'],
+            'assigned_by' => $request->user()->id,
+            'assigned_at' => now(),
+        ]);
+
+        foreach ($testIds as $testId) {
             LaboratoryTestAssignment::create([
                 'sample_id' => $sample->id,
                 'laboratory_test_id' => $testId,
