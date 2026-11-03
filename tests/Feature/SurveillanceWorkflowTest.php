@@ -128,9 +128,6 @@ class SurveillanceWorkflowTest extends TestCase
         ]);
         $laboratory->technicians()->attach($technician->id, ['assignment_role' => 'technician', 'effective_from' => now()->toDateString()]);
         $laboratory->technicians()->attach($manager->id, ['assignment_role' => 'manager', 'effective_from' => now()->toDateString()]);
-
-        $laboratory->technicians()->attach($technician->id, ['assignment_role' => 'technician', 'effective_from' => now()->toDateString()]);
-        $laboratory->technicians()->attach($manager->id, ['assignment_role' => 'manager', 'effective_from' => now()->toDateString()]);
         $catalogueTest = LaboratoryTest::create([
             'code' => 'NDV-PCR-'.Str::upper(Str::random(4)),
             'name' => 'Newcastle disease PCR',
