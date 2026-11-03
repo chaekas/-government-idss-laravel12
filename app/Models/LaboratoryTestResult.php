@@ -7,9 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LaboratoryTestResult extends Model
 {
-    protected $fillable = ['result_code', 'sample_id', 'laboratory_id', 'assigned_technician', 'reviewed_by', 'test_name', 'method', 'observations', 'qualitative_result', 'numeric_result', 'numeric_unit', 'status', 'technician_comments', 'review_comments', 'tested_at', 'approved_at'];
+    protected $fillable = ['result_code', 'sample_id', 'laboratory_id', 'assigned_technician', 'reviewed_by', 'laboratory_test_id', 'test_method_id', 'laboratory_test_assignment_id', 'test_name', 'method', 'observations', 'qualitative_result', 'numeric_result', 'numeric_unit', 'status', 'technician_comments', 'review_comments', 'tested_at', 'approved_at'];
 
     protected function casts(): array { return ['numeric_result' => 'decimal:4', 'tested_at' => 'datetime', 'approved_at' => 'datetime']; }
     public function sample(): BelongsTo { return $this->belongsTo(Sample::class); }
     public function laboratory(): BelongsTo { return $this->belongsTo(Laboratory::class); }
+    public function test(): BelongsTo { return $this->belongsTo(LaboratoryTest::class, 'laboratory_test_id'); }
+    public function testMethod(): BelongsTo { return $this->belongsTo(TestMethod::class, 'test_method_id'); }
+    public function assignment(): BelongsTo { return $this->belongsTo(LaboratoryTestAssignment::class, 'laboratory_test_assignment_id'); }
 }
