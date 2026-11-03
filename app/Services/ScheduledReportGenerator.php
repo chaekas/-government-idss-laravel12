@@ -9,11 +9,14 @@ use App\Models\Outbreak;
 use App\Models\Sample;
 use App\Models\ScheduledReport;
 use App\Models\UserNotification;
+use App\Models\User;
+use App\Services\UserDataScope;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ScheduledReportGenerator
 {
+    private ?User $scopeUser = null;
     public function runDue(): int
     {
         $count = 0;
@@ -31,6 +34,8 @@ class ScheduledReportGenerator
 
     public function generate(ScheduledReport $schedule): GeneratedReport
     {
+        $this->scopeUser = $schedule->creator;
+        if (!$this->scopeUser) { throw new \RuntimeException('Scheduled report creator no longer exists; refusing to generate an unscoped report.'); }
         $filters = $schedule->filters ?? [];
         $stream = fopen('php://temp', 'w+');
         fwrite($stream, "\xEF\xBB\xBF");
@@ -92,7 +97,7 @@ class ScheduledReportGenerator
     private function writeCases($stream, array $filters): void
     {
         fputcsv($stream, ['Case ID','Farm ID','Farm','Region','District','Suspected disease','Date observed','Severity','Status','Reported at']);
-        $query = $this->applyDates(DiseaseCase::with('farm')->orderBy('created_at'), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->cases(DiseaseCase::with('farm')->orderBy('created_at'), $this->scopeUser), $filters);
         foreach ($query->cursor() as $case) {
             fputcsv($stream, [$case->case_code,$case->farm?->farm_code,$case->farm?->name,$case->farm?->region,$case->farm?->district,$case->disease_suspected,$case->date_observed?->toDateString(),$case->severity,$case->status,$case->created_at?->toDateTimeString()]);
         }
@@ -101,7 +106,7 @@ class ScheduledReportGenerator
     private function writeSamples($stream, array $filters): void
     {
         fputcsv($stream, ['Sample ID','Case ID','Sample type','Laboratory','Collection date','Transport status','Quality status','Test status','Released at']);
-        $query = $this->applyDates(Sample::with(['diseaseCase','laboratory'])->orderBy('created_at'), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->samples(Sample::with(['diseaseCase','laboratory'])->orderBy('created_at'), $this->scopeUser), $filters);
         foreach ($query->cursor() as $sample) {
             fputcsv($stream, [$sample->sample_code,$sample->diseaseCase?->case_code,$sample->sample_type,$sample->laboratory?->name,$sample->collection_date?->toDateString(),$sample->transport_status,$sample->quality_status,$sample->test_status,$sample->released_at?->toDateTimeString()]);
         }
@@ -110,7 +115,7 @@ class ScheduledReportGenerator
     private function writeResults($stream, array $filters): void
     {
         fputcsv($stream, ['Result ID','Sample ID','Laboratory','Diagnostic test','Method','Finding','Status','Tested at','Reviewed at']);
-        $query = $this->applyDates(LaboratoryTestResult::with(['sample','laboratory','testMethod'])->orderBy('created_at'), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->laboratoryResults(LaboratoryTestResult::with(['sample','laboratory','testMethod'])->orderBy('created_at'), $this->scopeUser), $filters);
         foreach ($query->cursor() as $result) {
             $finding = $result->qualitative_result ?: ($result->numeric_result !== null ? $result->numeric_result.' '.$result->numeric_unit : $result->observations);
             fputcsv($stream, [$result->result_code,$result->sample?->sample_code,$result->laboratory?->name,$result->test_name,$result->testMethod?->name ?: $result->method,$finding,$result->status,$result->tested_at?->toDateTimeString(),$result->approved_at?->toDateTimeString()]);
@@ -120,7 +125,7 @@ class ScheduledReportGenerator
     private function writeOutbreaks($stream, array $filters): void
     {
         fputcsv($stream, ['Outbreak ID','Disease','Region','District','Start date','Cases','Deaths','Severity','Status']);
-        $query = $this->applyDates(Outbreak::orderBy('created_at'), $filters);
+        $query = $this->applyDates(app(UserDataScope::class)->outbreaks(Outbreak::orderBy('created_at'), $this->scopeUser), $filters);
         foreach ($query->cursor() as $outbreak) {
             fputcsv($stream, [$outbreak->outbreak_code,$outbreak->disease_name,$outbreak->region,$outbreak->district,$outbreak->start_date?->toDateString(),$outbreak->cases_count,$outbreak->deaths_count,$outbreak->severity,$outbreak->status]);
         }
