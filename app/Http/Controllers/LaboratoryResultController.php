@@ -12,6 +12,7 @@ use App\Models\SampleMovement;
 use App\Models\User;
 use App\Models\UserNotification;
 use App\Services\DiseaseCaseWorkflow;
+use App\Services\UserDataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -23,10 +24,10 @@ class LaboratoryResultController extends Controller
 
     public function index(Request $request)
     {
-        $query = LaboratoryTestResult::with(['sample.diseaseCase', 'laboratory', 'sample.assignedTechnician'])->latest();
-        if ($request->user()->role === 'laboratory_technician') {
-            $query->where('assigned_technician', $request->user()->id);
-        }
+        $query = app(UserDataScope::class)->laboratoryResults(
+            LaboratoryTestResult::with(['sample.diseaseCase', 'laboratory', 'sample.assignedTechnician'])->latest(),
+            $request->user()
+        );
 
         return view('laboratory.index', ['results' => $query->paginate(15)]);
     }
@@ -130,6 +131,7 @@ class LaboratoryResultController extends Controller
 
     public function approve(Request $request, LaboratoryTestResult $result)
     {
+        abort_unless(app(UserDataScope::class)->laboratoryResults(LaboratoryTestResult::query()->whereKey($result->id), $request->user())->exists(), 404);
         abort_unless(in_array($request->user()->role, [...self::LAB_REVIEW_ROLES, ...self::ADMIN_ROLES], true), 403);
         abort_unless($result->status === 'submitted_for_review', 422, 'Only results awaiting review can be approved or rejected.');
 
