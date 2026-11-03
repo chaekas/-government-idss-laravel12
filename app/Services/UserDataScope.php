@@ -37,7 +37,7 @@ class UserDataScope
         if ($this->global($user)) return $query;
 
         if ($user->hasRole('farmer')) {
-            return $query->whereHas('farm.farmers', fn (Builder $farmers) => $farmers->where('farmers.id', $user->farmer_id)->whereNull('farmer_farm.effective_to'));
+            return $query->whereHas('farm', fn (Builder $farms) => $farms->where('farmer_id', $user->farmer_id)->orWhereHas('farmers', fn (Builder $farmers) => $farmers->where('farmers.id', $user->farmer_id)->whereNull('farmer_farm.effective_to')));
         }
 
         if ($user->hasRole(self::AREA_ROLES)) return $this->applyCaseArea($query, $user);
@@ -57,7 +57,7 @@ class UserDataScope
     {
         if ($this->global($user)) return $query;
         if ($user->hasRole('farmer')) {
-            return $query->whereHas('farmers', fn (Builder $farmers) => $farmers->where('farmers.id', $user->farmer_id)->whereNull('farmer_farm.effective_to'));
+            return $query->where(fn (Builder $farms) => $farms->where('farmer_id', $user->farmer_id)->orWhereHas('farmers', fn (Builder $farmers) => $farmers->where('farmers.id', $user->farmer_id)->whereNull('farmer_farm.effective_to')));
         }
         if ($user->hasRole(self::AREA_ROLES)) {
             $ids = $user->accessibleAdministrativeAreaIds();
