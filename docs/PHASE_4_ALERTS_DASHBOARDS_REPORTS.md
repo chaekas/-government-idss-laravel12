@@ -28,7 +28,7 @@ This phase strengthens the reporting and decision-support layer on top of the di
 - Authorized leadership/system users can schedule case, sample, laboratory-result or outbreak reports daily, weekly or monthly.
 - Schedules support date filters and one or more authorized user recipients.
 - Laravel's scheduler runs due schedules, writes CSV files to private local storage, creates generated-report records and sends in-app notifications to recipients.
-- Generated reports are available through authenticated, recipient-checked download routes.
+- Generated reports are available through authenticated, recipient-checked download routes. The report archive lists only schedules and generated files created by or shared with the signed-in user (administrators can oversee all). Each scheduled file is generated using the creator's current geographic/laboratory data scope; regional schedules cannot be shared with recipients outside the creator's overlapping area or national oversight roles.
 
 ### 5. Access and confidentiality
 - Report pages and exports remain restricted to regional veterinary, Ministry and system administrator roles.
@@ -38,7 +38,8 @@ This phase strengthens the reporting and decision-support layer on top of the di
 ## Automated acceptance tests
 
 The test suite covers:
-- Report schedule creation and recipient validation.
+- Report schedule creation and geographic recipient validation.
+- Creator-scoped scheduled CSV content and private report archive visibility.
 - Due schedule execution and private CSV generation.
 - In-app notification delivery.
 - Print report and result/outbreak export access.
