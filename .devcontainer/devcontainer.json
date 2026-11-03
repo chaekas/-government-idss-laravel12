@@ -1,0 +1,11 @@
+{
+    "name": "Government IDSS Laravel",
+    "postStartCommand": "bash .devcontainer/start-app.sh",
+    "forwardPorts": [8000],
+    "portsAttributes": {
+        "8000": {
+            "label": "Government IDSS",
+            "onAutoForward": "openBrowser"
+        }
+    }
+}
