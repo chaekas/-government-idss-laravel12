@@ -120,6 +120,11 @@ class SurveillanceWorkflowTest extends TestCase
             'name' => 'Newcastle disease PCR',
             'is_active' => true,
         ]);
+        $secondCatalogueTest = LaboratoryTest::create([
+            'code' => 'AI-PCR-'.Str::upper(Str::random(4)),
+            'name' => 'Avian influenza PCR',
+            'is_active' => true,
+        ]);
         $testMethod = TestMethod::create([
             'code' => 'PCR-'.Str::upper(Str::random(4)),
             'name' => 'Polymerase chain reaction',
@@ -170,7 +175,7 @@ class SurveillanceWorkflowTest extends TestCase
         $this->actingAs($manager)->put(route('samples.assign', $sample), [
             'laboratory_section' => 'Virology',
             'assigned_technician' => $technician->id,
-            'laboratory_test_ids' => [$catalogueTest->id],
+            'laboratory_test_ids' => [$catalogueTest->id, $secondCatalogueTest->id],
         ])->assertRedirect(route('samples.index'));
         $assignment = LaboratoryTestAssignment::where('sample_id', $sample->id)->where('laboratory_test_id', $catalogueTest->id)->firstOrFail();
         $this->assertSame('assigned', $assignment->status);
@@ -203,6 +208,26 @@ class SurveillanceWorkflowTest extends TestCase
 
         $this->assertSame('approved', $result->fresh()->status);
         $this->assertSame('approved', $assignment->fresh()->status);
+        $this->assertSame('completed', $sample->fresh()->test_status);
+        $this->assertNull($sample->fresh()->released_at, 'The sample must not be released while another assigned diagnostic test is pending.');
+
+        $secondAssignment = LaboratoryTestAssignment::where('sample_id', $sample->id)
+            ->where('laboratory_test_id', $secondCatalogueTest->id)->firstOrFail();
+        $this->actingAs($technician)->post(route('laboratory.store'), [
+            'laboratory_test_assignment_id' => $secondAssignment->id,
+            'test_method_id' => $testMethod->id,
+            'observations' => 'Avian influenza target detected.',
+            'qualitative_result' => 'Positive',
+            'technician_comments' => 'Second assay controls passed.',
+        ])->assertRedirect(route('laboratory.index'));
+        $secondResult = LaboratoryTestResult::where('laboratory_test_assignment_id', $secondAssignment->id)->firstOrFail();
+
+        $this->actingAs($manager)->put(route('laboratory.approve', $secondResult), [
+            'decision' => 'approve',
+            'review_comments' => 'Second assay independently verified.',
+        ])->assertRedirect(route('laboratory.index'));
+
+        $this->assertSame('approved', $secondAssignment->fresh()->status);
         $this->assertSame('approved', $sample->fresh()->test_status);
         $this->assertNotNull($sample->fresh()->released_at);
         $this->assertSame('confirmed', $case->fresh()->status);
