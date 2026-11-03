@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DiseaseCase;
+use App\Models\AdministrativeArea;
 use App\Models\Farm;
 use App\Models\Farmer;
 use App\Models\Investigation;
@@ -72,6 +73,14 @@ class SurveillanceWorkflowTest extends TestCase
         $this->makeUser('zonal_laboratory_administrator');
         $this->makeUser('mlf_officer');
 
+        $area = AdministrativeArea::create([
+            'code' => 'DODOMA-'.Str::upper(Str::random(4)),
+            'name' => 'Dodoma Region',
+            'area_type' => 'region',
+            'is_active' => true,
+        ]);
+        $officer->administrativeAreas()->attach($area->id, ['effective_from' => now()->toDateString()]);
+
         $farmer = Farmer::create([
             'farmer_code' => 'FRM-'.Str::upper(Str::random(8)),
             'full_name' => 'Workflow Test Farmer',
@@ -85,6 +94,7 @@ class SurveillanceWorkflowTest extends TestCase
             'region' => 'Dodoma',
             'district' => 'Kondoa',
             'bird_count' => 20,
+            'administrative_area_id' => $area->id,
         ]);
         $case = DiseaseCase::create([
             'case_code' => 'CASE-'.Str::upper(Str::random(8)),
@@ -97,6 +107,7 @@ class SurveillanceWorkflowTest extends TestCase
             'birds_dead' => 1,
             'severity' => 'high',
             'status' => 'under_investigation',
+            'administrative_area_id' => $area->id,
         ]);
         Investigation::create([
             'investigation_code' => 'INV-'.Str::upper(Str::random(8)),
@@ -115,6 +126,11 @@ class SurveillanceWorkflowTest extends TestCase
             'district' => 'Dodoma',
             'is_active' => true,
         ]);
+        $laboratory->technicians()->attach($technician->id, ['assignment_role' => 'technician', 'effective_from' => now()->toDateString()]);
+        $laboratory->technicians()->attach($manager->id, ['assignment_role' => 'manager', 'effective_from' => now()->toDateString()]);
+
+        $laboratory->technicians()->attach($technician->id, ['assignment_role' => 'technician', 'effective_from' => now()->toDateString()]);
+        $laboratory->technicians()->attach($manager->id, ['assignment_role' => 'manager', 'effective_from' => now()->toDateString()]);
         $catalogueTest = LaboratoryTest::create([
             'code' => 'NDV-PCR-'.Str::upper(Str::random(4)),
             'name' => 'Newcastle disease PCR',
@@ -258,6 +274,7 @@ class SurveillanceWorkflowTest extends TestCase
             'region' => 'Dodoma',
             'district' => 'Kondoa',
             'bird_count' => 20,
+            'administrative_area_id' => $area->id,
         ]);
         $case = DiseaseCase::create([
             'case_code' => 'CASE-'.Str::upper(Str::random(8)),
@@ -270,6 +287,7 @@ class SurveillanceWorkflowTest extends TestCase
             'birds_dead' => 1,
             'severity' => 'high',
             'status' => 'under_investigation',
+            'administrative_area_id' => $area->id,
         ]);
         Investigation::create([
             'investigation_code' => 'INV-'.Str::upper(Str::random(8)),
@@ -280,6 +298,13 @@ class SurveillanceWorkflowTest extends TestCase
             'status' => 'under_investigation',
             'field_observations' => 'Sample collection required.',
         ]);
+        $area = AdministrativeArea::create([
+            'code' => 'GUARD-'.Str::upper(Str::random(4)),
+            'name' => 'Guard Region',
+            'area_type' => 'region',
+            'is_active' => true,
+        ]);
+        $officer->administrativeAreas()->attach($area->id, ['effective_from' => now()->toDateString()]);
         $laboratory = Laboratory::create([
             'code' => 'LAB-'.Str::upper(Str::random(8)),
             'name' => 'Workflow Guard Laboratory',
