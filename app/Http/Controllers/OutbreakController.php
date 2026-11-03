@@ -82,7 +82,7 @@ class OutbreakController extends Controller
             if($cases->count()!==count($caseIds)) throw ValidationException::withMessages(['case_ids'=>'One or more selected cases are invalid or outside your assigned geographic scope.']);
             foreach($cases as $case) if($case->farm?->district!==$data['district'] || $case->farm?->region!==$data['region']) throw ValidationException::withMessages(['case_ids'=>'Only disease cases from the outbreak district and region can be linked.']);
             $caseAreaIds = $cases->map(fn ($case) => $case->administrative_area_id ?: $case->farm?->administrative_area_id)->filter()->unique()->values();
-            if (!$data['administrative_area_id'] && $caseAreaIds->count() === 1) $data['administrative_area_id'] = $caseAreaIds->first();
+            if (empty($data['administrative_area_id']) && $caseAreaIds->count() === 1) $data['administrative_area_id'] = $caseAreaIds->first();
             if ($caseAreaIds->count() > 1 || ($caseAreaIds->isNotEmpty() && (int) ($data['administrative_area_id'] ?? 0) !== (int) $caseAreaIds->first())) {
                 throw ValidationException::withMessages(['administrative_area_id' => 'The outbreak area must match the linked disease cases.']);
             }
