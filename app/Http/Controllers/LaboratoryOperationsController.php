@@ -32,15 +32,28 @@ class LaboratoryOperationsController extends Controller
     {
         $this->authorizeManager($request);
 
+        $laboratories = Laboratory::where('is_active', true);
+        if (!in_array($request->user()->role, self::ADMIN_ROLES, true)) {
+            $labIds = $request->user()->activeLaboratoryIds();
+            $laboratories->whereIn('id', $labIds ?: [-1]);
+        }
+        $visibleLabIds = (clone $laboratories)->pluck('id')->all();
+
         return view('laboratory.operations', [
-            'laboratories' => Laboratory::where('is_active', true)->with(['sections', 'equipment.calibrations'])->orderBy('name')->get(),
+            'laboratories' => $laboratories->with(['sections', 'equipment.calibrations'])->orderBy('name')->get(),
             'tests' => LaboratoryTest::where('is_active', true)->orderBy('name')->get(),
             'methods' => TestMethod::where('is_active', true)->orderBy('name')->get(),
-            'samples' => Sample::where('transport_status', 'received')->where('quality_status', 'accepted')->with('laboratory')->orderBy('sample_code')->get(),
+            'samples' => Sample::whereIn('laboratory_id', $visibleLabIds ?: [-1])->where('transport_status', 'received')->where('quality_status', 'accepted')->with('laboratory')->orderBy('sample_code')->get(),
             'technicians' => User::where('role', 'laboratory_technician')->where('is_active', true)->orderBy('name')->get(),
-            'qualityRecords' => QualityControlRecord::with(['laboratory', 'sample', 'test'])->latest('performed_at')->paginate(15, ['*'], 'qc_page'),
-            'correctiveActions' => LaboratoryCorrectiveAction::with(['laboratory', 'equipment', 'assignee'])->latest()->paginate(15, ['*'], 'action_page'),
+            'qualityRecords' => QualityControlRecord::whereIn('laboratory_id', $visibleLabIds ?: [-1])->with(['laboratory', 'sample', 'test'])->latest('performed_at')->paginate(15, ['*'], 'qc_page'),
+            'correctiveActions' => LaboratoryCorrectiveAction::whereIn('laboratory_id', $visibleLabIds ?: [-1])->with(['laboratory', 'equipment', 'assignee'])->latest()->paginate(15, ['*'], 'action_page'),
         ]);
+    }
+
+    private function authorizeLaboratory(Request $request, int $laboratoryId): void
+    {
+        if (in_array($request->user()->role, self::ADMIN_ROLES, true)) return;
+        abort_unless(in_array($laboratoryId, $request->user()->activeLaboratoryIds(), true), 404);
     }
 
     public function storeSection(Request $request)
@@ -51,6 +64,7 @@ class LaboratoryOperationsController extends Controller
             'code' => ['required', 'string', 'max:80'],
             'name' => ['required', 'string', 'max:160'],
         ]);
+        $this->authorizeLaboratory($request, (int) $data['laboratory_id']);
         if (LaboratorySection::where('laboratory_id', $data['laboratory_id'])->where('code', $data['code'])->exists()) {
             throw ValidationException::withMessages(['code' => 'That section code already exists in the selected laboratory.']);
         }
@@ -73,6 +87,7 @@ class LaboratoryOperationsController extends Controller
             'calibration_due_at' => ['nullable', 'date', 'after_or_equal:last_calibrated_at'],
             'status' => ['required', Rule::in(['active', 'maintenance', 'retired'])],
         ]);
+        $this->authorizeLaboratory($request, (int) $data['laboratory_id']);
         $equipment = LaboratoryEquipment::create($data);
         $this->audit($request, 'laboratory.equipment_created', 'laboratory_equipment', $equipment->id, 'Registered equipment '.$equipment->equipment_code.'.');
         return back()->with('status', 'Laboratory equipment registered.');
@@ -81,6 +96,7 @@ class LaboratoryOperationsController extends Controller
     public function updateEquipment(Request $request, LaboratoryEquipment $equipment)
     {
         $this->authorizeManager($request);
+        $this->authorizeLaboratory($request, (int) $equipment->laboratory_id);
         $data = $request->validate([
             'status' => ['required', Rule::in(['active', 'maintenance', 'retired'])],
         ]);
@@ -92,6 +108,7 @@ class LaboratoryOperationsController extends Controller
     public function recordCalibration(Request $request, LaboratoryEquipment $equipment)
     {
         $this->authorizeManager($request);
+        $this->authorizeLaboratory($request, (int) $equipment->laboratory_id);
         $data = $request->validate([
             'calibration_date' => ['required', 'date', 'before_or_equal:today'],
             'due_date' => ['nullable', 'date', 'after:calibration_date'],
@@ -138,6 +155,7 @@ class LaboratoryOperationsController extends Controller
             'corrective_action' => ['nullable', 'required_if:outcome,failed', 'string', 'max:4000'],
             'performed_at' => ['required', 'date', 'before_or_equal:now'],
         ]);
+        $this->authorizeLaboratory($request, (int) $data['laboratory_id']);
         if (!empty($data['sample_id'])) {
             $sample = Sample::findOrFail($data['sample_id']);
             if ((int) $sample->laboratory_id !== (int) $data['laboratory_id']) {
@@ -164,6 +182,7 @@ class LaboratoryOperationsController extends Controller
     public function updateCorrectiveAction(Request $request, LaboratoryCorrectiveAction $action)
     {
         $this->authorizeManager($request);
+        $this->authorizeLaboratory($request, (int) $action->laboratory_id);
         $data = $request->validate([
             'status' => ['required', Rule::in(['open', 'in_progress', 'resolved', 'cancelled'])],
             'resolution' => ['nullable', 'required_if:status,resolved', 'string', 'max:4000'],
