@@ -109,8 +109,8 @@ The application uses server-side role middleware; hiding a menu item is not trea
 | Poultry Field Officer (LFO) | Register farmers, farms and animals; investigate cases; collect/register samples; update field case information; record suspected outbreak reports. |
 | Laboratory Technician | View sample custody and laboratory records; record test results for received, quality-accepted samples; cannot approve/reject their own result or perform the manager's approval step. |
 | Laboratory Manager | Review and approve/reject submitted laboratory results, subject to independent-review checks; view laboratory and sample workflows. |
-| Regional Veterinary Officer | Access regional surveillance workflows, case investigations, outbreak records, reports and GIS. Geographic filtering by assigned region is still a production-hardening requirement. |
-| Zonal Laboratory Administrator | View the laboratory registry and laboratory/sample workflows for zonal oversight. Geographic/laboratory-level record scoping still requires assignment data and Ministry policy. |
+| Regional Veterinary Officer | Access surveillance cases, farms, investigations, outbreaks, reports and GIS within assigned administrative areas and their active descendant areas. |
+| Zonal Laboratory Administrator | View and manage laboratory/sample workflows only for laboratories assigned to the account. |
 | MLF Officer | View national surveillance reports, GIS, cases, outbreak records, notifications, samples and laboratory results for oversight. |
 | System Administrator | Create/deactivate accounts, assign roles, manage access, review audit records and access authorized administrative workflows. The last active system administrator cannot be demoted or disabled. |
 
@@ -119,12 +119,12 @@ The application uses server-side role middleware; hiding a menu item is not trea
 ## Known remaining work before production
 
 This repository is an operational development foundation, not a certified production deployment. The following SRS capabilities still require implementation and/or stakeholder verification:
-- Complete role/permission matrix and administrative/geographic record-level scoping for all staff modules; farmer-to-farm case access is scoped, but wider regional/district scoping still needs Ministry policy definitions.
-- Formal disease investigation sign-off and richer case lifecycle/status transitions.
-- Diagnostic test master catalogue, sample quality control inspections, equipment calibration, corrective actions, and immutable approved-result records.
+- Final Ministry approval of the role/permission matrix and UAT of the implemented geographic/laboratory scopes. Field and regional users are restricted to assigned administrative areas and descendants; laboratory users are restricted to assigned laboratories; users without assignments receive no scoped records.
+- Ministry UAT of the implemented investigation approval, case lifecycle, outbreak linkage and sample-to-result workflows.
+- Ministry-approved diagnostic catalogue, test methods/SOPs, QC acceptance criteria, equipment inventory/calibration intervals, electronic signature policy and laboratory UAT. The application workflows for test assignment, independent result review, QC, calibration and CAPA are implemented.
 - Real notification delivery through an approved SMS/email gateway; in-app notifications exist, but external SMS/email delivery is not configured.
-- PDF/XLSX generation, scheduled reporting, and complete executive/laboratory performance analytics. Current exports are CSV files that can be opened in spreadsheet software.
-- Advanced GIS hotspot analysis, administrative-boundary overlays, and map filtering; the current map displays entered coordinates only.
+- Native XLSX workbook generation and server-side PDF rendering are not included; current CSV exports are Excel-compatible and consolidated reports can be printed/saved as PDF in the browser. Scheduled daily/weekly/monthly CSV reports and in-app notifications are implemented.
+- Advanced spatial hotspot analysis, official administrative-boundary overlays, PostGIS spatial queries and map export remain. The current GIS map supports disease/species/date/area filters and uses entered case/farm/outbreak coordinates.
 - UTAMBUZI integration, which cannot be activated until the Ministry provides the official API specification, authorized credentials, and test environment.
 - Password reset delivery, account lockout policy, configurable idle timeout, and additional security review.
 - Production database configuration (the SRS specifies PostgreSQL), HTTPS, backups, deployment monitoring, UAT, and formal acceptance.
