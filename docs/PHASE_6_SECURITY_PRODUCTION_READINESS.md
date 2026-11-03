@@ -79,6 +79,7 @@ DB_DATABASE=government_idss
 DB_USERNAME=<least-privilege-application-role>
 DB_PASSWORD=<secret-from-secret-manager>
 DB_SSLMODE=verify-full
+DB_SSLROOTCERT=/path/to/approved-root-ca.pem
 DB_SEARCH_PATH=public
 SESSION_DRIVER=database
 SESSION_ENCRYPT=true
@@ -139,6 +140,10 @@ pg_restore --clean --if-exists --no-owner --no-acl \
 5. Reopen the service only after data-owner and DBA approval.
 
 A restore must be rehearsed in a non-production environment on a defined schedule. The restore command is intentionally not automated by the web application.
+
+## Continuous integration coverage
+
+GitHub Actions runs the feature suite on PHP 8.2, 8.3 and 8.4, provisions PostgreSQL 16 with PostGIS, applies the full migration set against that database, validates the route table, and exercises PostgreSQL backup creation/verification. The feature suite separately runs against in-memory SQLite, including a real SQLite backup integrity and file-permission test.
 
 ## Verification commands
 
