@@ -161,19 +161,25 @@ class LaboratoryResultController extends Controller
         }
 
         if ($approved) {
-            // A rejected historical attempt does not block a later approved repeat.
-            // The latest result for each named test is the operative result.
-            $latestByTest = $sample->results()
+            // The latest assignment for every catalogue test must be approved.
+            // This prevents early release when another assigned test is still pending,
+            // and permits a rejected test to be repeated as a new assignment.
+            $latestAssignments = $sample->testAssignments()
                 ->orderByDesc('id')
                 ->get()
-                ->groupBy('test_name')
-                ->map(fn ($testResults) => $testResults->first());
-            $allLatestResultsApproved = $latestByTest->isNotEmpty()
-                && $latestByTest->every(fn (LaboratoryTestResult $item) => $item->status === 'approved');
+                ->groupBy('laboratory_test_id')
+                ->map(fn ($assignments) => $assignments->first());
+            $allLatestAssignmentsApproved = $latestAssignments->isNotEmpty()
+                && $latestAssignments->every(fn (LaboratoryTestAssignment $item) => $item->status === 'approved');
 
-            if ($allLatestResultsApproved) {
-                $approvedResults = $latestByTest->values();
-                $summaries = $approvedResults->map(function (LaboratoryTestResult $item) {
+            if ($allLatestAssignmentsApproved) {
+                $latestResults = $sample->results()
+                    ->whereNotNull('laboratory_test_id')
+                    ->orderByDesc('id')
+                    ->get()
+                    ->groupBy('laboratory_test_id')
+                    ->map(fn ($testResults) => $testResults->first());
+                $summaries = $latestResults->map(function (LaboratoryTestResult $item) {
                     $finding = $item->qualitative_result
                         ?: ($item->numeric_result !== null ? $item->numeric_result.' '.$item->numeric_unit : $item->observations);
                     return $item->test_name.': '.($finding ?: 'No result text recorded');
@@ -186,7 +192,7 @@ class LaboratoryResultController extends Controller
                     'released_at' => now(),
                 ]);
 
-                $classifications = $approvedResults->map(function (LaboratoryTestResult $item) {
+                $classifications = $latestResults->map(function (LaboratoryTestResult $item) {
                     $finding = strtolower((string) ($item->qualitative_result ?: $item->observations));
                     if (preg_match('/\\b(negative|not detected|absent)\\b/', $finding)) {
                         return 'negative';
@@ -209,11 +215,11 @@ class LaboratoryResultController extends Controller
                     'event_type' => 'final_result_released',
                     'from_location' => 'Laboratory manager review',
                     'to_location' => 'Disease surveillance / authorized case team',
-                    'notes' => 'All latest recorded tests have been approved. Final result: '.$summaries,
+                    'notes' => 'All latest assigned diagnostic tests have been approved. Final result: '.$summaries,
                     'recorded_by' => $request->user()->id,
                     'event_at' => now(),
                 ]);
-                $this->notifyStakeholders($sample, 'Final laboratory result released', 'Sample '.$sample->sample_code.' has completed testing and independent review. Final result: '.$summaries.'. Case status: '.$caseStatus.'.');
+                $this->notifyStakeholders($sample, 'Final laboratory result released', 'Sample '.$sample->sample_code.' has completed all assigned tests and independent review. Final result: '.$summaries.'. Case status: '.$caseStatus.'.');
             } else {
                 $sample->update(['test_status' => 'completed']);
                 SampleMovement::create([
