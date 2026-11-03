@@ -140,6 +140,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
         Route::get('/reports/cases.csv', [ReportsController::class, 'cases'])->name('reports.cases');
         Route::get('/reports/samples.csv', [ReportsController::class, 'samples'])->name('reports.samples');
+        Route::get('/reports/results.csv', [ReportsController::class, 'results'])->name('reports.results');
+        Route::get('/reports/outbreaks.csv', [ReportsController::class, 'outbreaks'])->name('reports.outbreaks');
+        Route::get('/reports/print', [ReportsController::class, 'print'])->name('reports.print');
+        Route::post('/reports/schedules', [ReportsController::class, 'schedule'])->name('reports.schedule');
+        Route::get('/reports/generated/{report}/download', [ReportsController::class, 'download'])->name('reports.generated.download');
         Route::get('/gis', [GISController::class, 'index'])->name('gis.index');
         Route::get('/surveillance', [SurveillanceController::class, 'index'])->name('surveillance.index');
     });
