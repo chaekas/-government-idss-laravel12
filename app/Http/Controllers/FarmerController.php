@@ -103,7 +103,7 @@ class FarmerController extends Controller
         ]);
 
         $duplicate = Farmer::whereRaw('LOWER(full_name) = ?', [mb_strtolower($data['full_name'])])
-            ->where('phone', $data['phone'])->whereKeyNot($farmer->id)->first();
+            ->where('phone', $data['phone'])->where('id', '<>', $farmer->id)->first();
         if ($duplicate) {
             throw ValidationException::withMessages([
                 'phone' => 'Another farmer with the same name and mobile number exists ('.$duplicate->farmer_code.'). Verify the identity before updating.',
