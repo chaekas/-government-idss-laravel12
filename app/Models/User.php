@@ -31,7 +31,7 @@ class User extends Authenticatable
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }
     public function office(): BelongsTo { return $this->belongsTo(Office::class); }
     public function roles(): BelongsToMany { return $this->belongsToMany(Role::class)->withTimestamps(); }
-    public function administrativeAreas(): BelongsToMany { return $this->belongsToMany(AdministrativeArea::class)->withPivot(['effective_from', 'effective_to'])->wherePivotNull('effective_to')->withTimestamps(); }
+    public function administrativeAreas(): BelongsToMany { return $this->belongsToMany(AdministrativeArea::class, 'user_administrative_area')->withPivot(['effective_from', 'effective_to'])->wherePivotNull('effective_to')->withTimestamps(); }
     public function laboratories(): BelongsToMany { return $this->belongsToMany(Laboratory::class)->withPivot(['assignment_role', 'effective_from', 'effective_to'])->wherePivotNull('effective_to')->withTimestamps(); }
 
     public function hasRole(string|array $roles): bool
