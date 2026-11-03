@@ -25,6 +25,30 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
 
+// Public readiness endpoint for load balancers and deployment monitors.
+// It reports dependency state without exposing credentials or exception details.
+Route::get('/health/idss', function () {
+    try {
+        \\Illuminate\\Support\\Facades\\DB::select('SELECT 1');
+
+        return response()->json([
+            'status' => 'ok',
+            'service' => 'government-idss',
+            'checks' => ['database' => 'ok'],
+        ]);
+    } catch (\\Throwable $exception) {
+        \\Illuminate\\Support\\Facades\\Log::warning('IDSS readiness check failed.', [
+            'exception' => get_class($exception),
+        ]);
+
+        return response()->json([
+            'status' => 'degraded',
+            'service' => 'government-idss',
+            'checks' => ['database' => 'failed'],
+        ], 503);
+    }
+})->name('health.idss');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'create'])->name('login');
     Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:5,1')->name('login.store');
