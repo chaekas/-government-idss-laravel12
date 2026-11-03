@@ -238,8 +238,8 @@ class SampleController extends Controller
                 'required',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'laboratory_technician')->where('is_active', true)),
             ],
-            'laboratory_test_ids' => ['nullable', 'array'],
-            'laboratory_test_ids.*' => ['integer', Rule::exists('laboratory_tests', 'id')->where(fn ($query) => $query->where('is_active', true))],
+            'laboratory_test_ids' => ['required', 'array', 'min:1'],
+            'laboratory_test_ids.*' => ['required', 'integer', 'distinct', Rule::exists('laboratory_tests', 'id')->where(fn ($query) => $query->where('is_active', true))],
         ]);
 
         if ($sample->transport_status !== 'received' || $sample->quality_status !== 'accepted') {
