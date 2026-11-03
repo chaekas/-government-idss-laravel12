@@ -29,15 +29,15 @@ Route::get('/', fn () => redirect()->route('dashboard'));
 // It reports dependency state without exposing credentials or exception details.
 Route::get('/health/idss', function () {
     try {
-        \\Illuminate\\Support\\Facades\\DB::select('SELECT 1');
+        DB::select('SELECT 1');
 
         return response()->json([
             'status' => 'ok',
             'service' => 'government-idss',
             'checks' => ['database' => 'ok'],
         ]);
-    } catch (\\Throwable $exception) {
-        \\Illuminate\\Support\\Facades\\Log::warning('IDSS readiness check failed.', [
+    } catch (Throwable $exception) {
+        Log::warning('IDSS readiness check failed.', [
             'exception' => get_class($exception),
         ]);
 
