@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\AdministrativeArea;
+use App\Models\FarmerAddress;
+use App\Models\FarmerContact;
 use App\Models\Farmer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -32,7 +35,7 @@ class FarmerController extends Controller
 
     public function create()
     {
-        return view('farmers.create');
+        return view('farmers.create', ['administrativeAreas' => AdministrativeArea::where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function store(Request $request)
@@ -50,6 +53,7 @@ class FarmerController extends Controller
             'ward' => ['nullable', 'string', 'max:100'],
             'village' => ['nullable', 'string', 'max:100'],
             'address' => ['nullable', 'string', 'max:255'],
+            'administrative_area_id' => ['nullable', 'exists:administrative_areas,id'],
             'status' => ['required', 'in:active,inactive,deceased,suspended'],
         ]);
 
@@ -64,7 +68,17 @@ class FarmerController extends Controller
 
         $data['farmer_code'] = 'FRM-'.now()->format('Y').'-'.Str::upper(Str::random(6));
         $data['created_by'] = $request->user()->id;
-        $farmer = Farmer::create($data);
+        $farmer = Farmer::create(collect($data)->except('administrative_area_id')->all());
+        $farmer->contacts()->create(['contact_type' => 'phone', 'contact_value' => $data['phone'], 'is_primary' => true]);
+        if (!empty($data['email'])) {
+            $farmer->contacts()->create(['contact_type' => 'email', 'contact_value' => $data['email'], 'is_primary' => false]);
+        }
+        $farmer->addresses()->create([
+            'administrative_area_id' => $data['administrative_area_id'] ?? null,
+            'address_type' => 'physical', 'address_line' => $data['address'] ?? null,
+            'region' => $data['region'], 'district' => $data['district'],
+            'ward' => $data['ward'] ?? null, 'village' => $data['village'] ?? null, 'is_primary' => true,
+        ]);
 
         AuditLog::create([
             'user_id' => $request->user()->id,
@@ -81,7 +95,7 @@ class FarmerController extends Controller
 
     public function edit(Farmer $farmer)
     {
-        return view('farmers.create', compact('farmer'));
+        return view('farmers.create', ['farmer' => $farmer, 'administrativeAreas' => AdministrativeArea::where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function update(Request $request, Farmer $farmer)
@@ -111,7 +125,38 @@ class FarmerController extends Controller
         }
 
         $data['modified_by'] = $request->user()->id;
+        $administrativeAreaId = $data['administrative_area_id'] ?? null;
+        unset($data['administrative_area_id']);
+        $oldAddress = $farmer->addresses()->where('is_primary', true)->first();
         $farmer->update($data);
+        $primaryPhone = $farmer->contacts()->where('contact_type', 'phone')->where('is_primary', true)->first();
+        if (!$primaryPhone || $primaryPhone->contact_value !== $data['phone']) {
+            $farmer->contacts()->where('contact_type', 'phone')->where('is_primary', true)->update(['is_primary' => false]);
+            $farmer->contacts()->create(['contact_type' => 'phone', 'contact_value' => $data['phone'], 'is_primary' => true]);
+        }
+        if (!empty($data['email'])) {
+            $primaryEmail = $farmer->contacts()->where('contact_type', 'email')->where('is_primary', true)->first();
+            if (!$primaryEmail || $primaryEmail->contact_value !== $data['email']) {
+                $farmer->contacts()->where('contact_type', 'email')->where('is_primary', true)->update(['is_primary' => false]);
+                $farmer->contacts()->create(['contact_type' => 'email', 'contact_value' => $data['email'], 'is_primary' => true]);
+            }
+        }
+        $addressChanged = !$oldAddress
+            || $oldAddress->administrative_area_id != $administrativeAreaId
+            || $oldAddress->address_line !== ($data['address'] ?? null)
+            || $oldAddress->region !== $data['region']
+            || $oldAddress->district !== $data['district']
+            || $oldAddress->ward !== ($data['ward'] ?? null)
+            || $oldAddress->village !== ($data['village'] ?? null);
+        if ($addressChanged) {
+            $farmer->addresses()->where('is_primary', true)->update(['is_primary' => false]);
+            $farmer->addresses()->create([
+                'administrative_area_id' => $administrativeAreaId, 'address_type' => 'physical',
+                'address_line' => $data['address'] ?? null, 'region' => $data['region'],
+                'district' => $data['district'], 'ward' => $data['ward'] ?? null,
+                'village' => $data['village'] ?? null, 'is_primary' => true,
+            ]);
+        }
         AuditLog::create([
             'user_id' => $request->user()->id, 'action' => 'farmer.updated',
             'entity_type' => 'farmer', 'entity_id' => (string) $farmer->id,
