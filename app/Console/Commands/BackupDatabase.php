@@ -105,9 +105,11 @@ class BackupDatabase extends Command
             '--no-acl',
             '--file='.$path,
             (string) $database['database'],
-        ], base_path(), [
+        ], base_path(), array_filter([
             'PGPASSWORD' => (string) ($database['password'] ?? ''),
-        ]);
+            'PGSSLMODE' => (string) ($database['sslmode'] ?? 'prefer'),
+            'PGSSLROOTCERT' => $database['sslrootcert'] ?? null,
+        ], fn ($value) => $value !== null && $value !== ''));
 
         $process->setTimeout(3600);
         $process->run();
