@@ -7,7 +7,7 @@ This phase completes the laboratory diagnostic workflow around the existing samp
 ## Delivered
 
 ### 1. Diagnostic test catalogue and assignment
-- Managers assign one or more active catalogue tests to a received, quality-accepted sample and an active technician.
+- Managers assign one or more active catalogue tests to a received, quality-accepted sample and an active technician who has a current technician assignment to that same destination laboratory. The assignment API and technician selector both enforce this boundary.
 - Each assignment stores its laboratory, technician, assigning user, assignment time and workflow status.
 - Technicians can submit results only against a test assignment belonging to their account.
 - Result records retain the catalogue test, optional approved test method, assignment, technician, timestamps, observations, qualitative/numeric findings and reviewer comments.
@@ -42,7 +42,7 @@ This phase completes the laboratory diagnostic workflow around the existing samp
 - Resolution text and resolved timestamp are required/stored when closing an action.
 
 ### 7. Security and audit
-- Laboratory operations management routes are restricted to laboratory managers, zonal laboratory administrators and system administrators.
+- Laboratory operations management routes are restricted to laboratory managers, zonal laboratory administrators and system administrators. Managers and zonal administrators can manage only laboratories currently assigned to their accounts; sample assignment selectors expose only technicians assigned to that sample's laboratory.
 - Technicians can submit assigned results but cannot manage equipment, QC controls or CAPA records.
 - Creation, calibration, QC and CAPA status changes are written to the audit log.
 
