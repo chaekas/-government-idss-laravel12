@@ -40,6 +40,7 @@ class LaboratoryManagementTest extends TestCase
     {
         $manager = $this->user('laboratory_manager');
         $lab = $this->laboratory();
+        $lab->technicians()->attach($manager->id, ['assignment_role' => 'manager', 'effective_from' => now()->toDateString()]);
 
         $this->actingAs($manager)->post(route('laboratory.sections.store'), [
             'laboratory_id' => $lab->id,
@@ -89,6 +90,7 @@ class LaboratoryManagementTest extends TestCase
     {
         $manager = $this->user('laboratory_manager');
         $lab = $this->laboratory();
+        $lab->technicians()->attach($manager->id, ['assignment_role' => 'manager', 'effective_from' => now()->toDateString()]);
 
         $this->actingAs($manager)->post(route('laboratory.quality-control.store'), [
             'laboratory_id' => $lab->id,
