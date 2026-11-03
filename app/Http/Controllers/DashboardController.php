@@ -20,7 +20,12 @@ class DashboardController extends Controller
 
         if ($user->role === 'farmer') {
             $farmerId = $user->farmer_id;
-            $farmIds = $farmerId ? Farm::where('farmer_id', $farmerId)->select('id') : Farm::whereRaw('1 = 0')->select('id');
+            $farmIds = $farmerId
+                ? Farm::where(function ($farms) use ($farmerId) {
+                    $farms->where('farmer_id', $farmerId)
+                        ->orWhereHas('farmers', fn ($owners) => $owners->where('farmers.id', $farmerId)->whereNull('farmer_farm.effective_to'));
+                })->select('id')
+                : Farm::whereRaw('1 = 0')->select('id');
             $caseIds = DiseaseCase::whereIn('farm_id', $farmIds)->select('id');
 
             return view('dashboard', [
