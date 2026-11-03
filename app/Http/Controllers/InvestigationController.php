@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Services\DiseaseCaseWorkflow;
+use App\Services\UserDataScope;
 
 class InvestigationController extends Controller
 {
@@ -22,15 +23,15 @@ class InvestigationController extends Controller
 
     public function index(Request $request)
     {
-        $query=Investigation::with(['diseaseCase.farm','assignee','approver','attachments','history.changedBy'])->latest();
-        if($request->user()->role==='field_officer') $query->where('assigned_to',$request->user()->id)->orWhere('started_by',$request->user()->id);
+        $query=app(UserDataScope::class)->investigations(Investigation::with(['diseaseCase.farm','assignee','approver','attachments','history.changedBy'])->latest(), $request->user());
         return view('investigations.index',['investigations'=>$query->paginate(15)->withQueryString()]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $cases = app(UserDataScope::class)->cases(DiseaseCase::with('farm')->whereIn('status',['reported','under_investigation'])->whereDoesntHave('investigation')->latest(), $request->user());
         return view('investigations.create',[
-            'cases'=>DiseaseCase::with('farm')->whereIn('status',['reported','under_investigation'])->whereDoesntHave('investigation')->latest()->get(),
+            'cases'=>$cases->get(),
             'officers'=>User::where('is_active',true)->whereIn('role',self::ASSIGNEE_ROLES)->orderBy('name')->get(),
         ]);
     }
@@ -54,6 +55,7 @@ class InvestigationController extends Controller
             'attachments.*'=>['file','mimes:jpg,jpeg,png,pdf,doc,docx','max:15360'],
         ]);
         $case=DiseaseCase::with('farm')->findOrFail($data['disease_case_id']);
+        abort_unless(app(UserDataScope::class)->cases(DiseaseCase::query()->whereKey($case->id), $request->user())->exists(), 404);
         if($data['investigated_at'] < $case->date_observed->toDateString()) throw ValidationException::withMessages(['investigated_at'=>'Investigation date cannot precede the disease report observation date.']);
         if($case->investigation()->exists()) throw ValidationException::withMessages(['disease_case_id'=>'An investigation already exists for this case.']);
         $files=$request->file('attachments',[]); unset($data['attachments']);
@@ -73,8 +75,14 @@ class InvestigationController extends Controller
         return redirect()->route('investigations.index')->with('status','Investigation created and assigned. ID: '.$investigation->investigation_code);
     }
 
+    private function authorizeInvestigation(Request $request, Investigation $investigation): void
+    {
+        abort_unless(app(UserDataScope::class)->investigations(Investigation::query()->whereKey($investigation->id), $request->user())->exists(), 404);
+    }
+
     public function update(Request $request,Investigation $investigation)
     {
+        $this->authorizeInvestigation($request, $investigation);
         abort_unless(!$investigation->approved_at,403,'Approved investigation reports are locked.');
         abort_unless(in_array($request->user()->role,['field_officer','regional_veterinary_officer','system_admin','super_admin','super-admin','administrator','admin'],true),403);
         if($request->user()->role==='field_officer') abort_unless((int)$investigation->assigned_to===(int)$request->user()->id,403);
@@ -110,6 +118,7 @@ class InvestigationController extends Controller
 
     public function report(Request $request,Investigation $investigation)
     {
+        $this->authorizeInvestigation($request, $investigation);
         $role=$request->user()->role;
         abort_unless(in_array($role,['field_officer','regional_veterinary_officer','mlf_officer','system_admin','super_admin','super-admin','administrator','admin'],true),403);
         if($role==='field_officer') abort_unless((int)$investigation->assigned_to===(int)$request->user()->id || (int)$investigation->started_by===(int)$request->user()->id,403);
@@ -118,6 +127,7 @@ class InvestigationController extends Controller
 
     public function approve(Request $request,Investigation $investigation)
     {
+        $this->authorizeInvestigation($request, $investigation);
         abort_unless(in_array($request->user()->role,self::APPROVER_ROLES,true),403);
         abort_if($investigation->approved_at,422,'This investigation has already been approved.');
         abort_if($investigation->status!=='completed',422,'Complete the investigation and record recommendations before approval.');
