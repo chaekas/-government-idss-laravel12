@@ -8,6 +8,7 @@ use App\Models\LaboratoryTestResult;
 use App\Models\Outbreak;
 use App\Models\Sample;
 use App\Models\UserNotification;
+use App\Services\UserDataScope;
 use Illuminate\Http\Request;
 
 class SurveillanceController extends Controller
@@ -17,7 +18,8 @@ class SurveillanceController extends Controller
         $filters=$request->validate(['from'=>['nullable','date'],'to'=>['nullable','date','after_or_equal:from']]);
         $from=$filters['from']??now()->subMonths(11)->startOfMonth()->toDateString();
         $to=$filters['to']??now()->toDateString();
-        $base=DiseaseCase::with(['farm','diseaseCategory'])->whereDate('date_observed','>=',$from)->whereDate('date_observed','<=',$to);
+        $scope=app(UserDataScope::class);
+        $base=$scope->cases(DiseaseCase::with(['farm','diseaseCategory'])->whereDate('date_observed','>=',$from)->whereDate('date_observed','<=',$to), $request->user());
         $cases=$base->get();
 
         $statusCounts=$cases->groupBy('status')->map->count()->sortDesc();
@@ -25,7 +27,7 @@ class SurveillanceController extends Controller
         $speciesCounts=$cases->groupBy(fn($case)=>$case->affected_species ?: 'Not recorded')->map->count()->sortDesc();
         $hotspots=$cases->groupBy(fn($case)=>trim(($case->farm?->district ?: 'Unknown district').', '.($case->farm?->region ?: 'Unknown region')))->map(function($items){return ['cases'=>$items->count(),'deaths'=>$items->sum('birds_dead'),'affected'=>$items->sum('birds_affected')];})->sortByDesc('cases')->take(10);
         $monthly=$cases->groupBy(fn($case)=>($case->date_observed ?: $case->created_at)->format('Y-m'))->map->count()->sortKeys();
-        $samples=Sample::whereNotNull('released_at')->get(['created_at','released_at']);
+        $samples=$scope->samples(Sample::whereNotNull('released_at'), $request->user())->get(['created_at','released_at']);
         $turnaroundHours=$samples->map(fn($sample)=>$sample->created_at?->diffInHours($sample->released_at))->filter(fn($hours)=>$hours!==null);
         $monthlyTrend=[];
         $cursor=\Illuminate\Support\Carbon::parse($from)->startOfMonth();
@@ -36,15 +38,15 @@ class SurveillanceController extends Controller
             'from'=>$filters['from']??'','to'=>$filters['to']??'',
             'caseCount'=>$cases->count(),'openCases'=>$cases->whereIn('status',['reported','under_investigation','sample_collected','laboratory_testing'])->count(),
             'confirmedCases'=>$cases->where('status','confirmed')->count(),'rejectedCases'=>$cases->where('status','rejected')->count(),
-            'investigationCount'=>Investigation::whereIn('status',['under_investigation','sample_collected','completed'])->count(),
-            'pendingInvestigations'=>Investigation::whereIn('status',['under_investigation','sample_collected'])->count(),
-            'activeOutbreaks'=>Outbreak::whereIn('status',['suspected','active'])->count(),
+            'investigationCount'=>$scope->investigations(Investigation::query(), $request->user())->whereIn('status',['under_investigation','sample_collected','completed'])->count(),
+            'pendingInvestigations'=>$scope->investigations(Investigation::query(), $request->user())->whereIn('status',['under_investigation','sample_collected'])->count(),
+            'activeOutbreaks'=>$scope->outbreaks(Outbreak::query(), $request->user())->whereIn('status',['suspected','active'])->count(),
             'statusCounts'=>$statusCounts,'diseaseCounts'=>$diseaseCounts,'speciesCounts'=>$speciesCounts,'hotspots'=>$hotspots,'monthlyTrend'=>$monthlyTrend,
             'averageTurnaroundHours'=>$turnaroundHours->isNotEmpty()?round($turnaroundHours->avg(),1):null,
             'releasedSamples'=>$turnaroundHours->count(),
             'unreadAlerts'=>UserNotification::where('user_id',$request->user()->id)->whereNull('read_at')->whereIn('category',['surveillance','outbreak'])->count(),
             'recentAlerts'=>UserNotification::where('user_id',$request->user()->id)->whereIn('category',['surveillance','outbreak'])->latest()->take(8)->get(),
-            'outbreaksByRegion'=>Outbreak::whereIn('status',['suspected','active'])->selectRaw('region, district, COUNT(*) as total')->groupBy('region','district')->orderByDesc('total')->limit(10)->get(),
+            'outbreaksByRegion'=>$scope->outbreaks(Outbreak::query(), $request->user())->whereIn('status',['suspected','active'])->selectRaw('region, district, COUNT(*) as total')->groupBy('region','district')->orderByDesc('total')->limit(10)->get(),
         ]);
     }
 }
